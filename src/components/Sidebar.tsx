@@ -5,8 +5,8 @@
 
 import React from 'react';
 import MiniCalendar from './MiniCalendar';
-import { Instructor, Location, TrainingStatus } from '../types';
-import { Plus, Check, Filter, Trash2, CalendarRange, UserCheck, MapPin } from 'lucide-react';
+import { Instructor, Location } from '../types';
+import { Plus, Check, UserCheck, MapPin } from 'lucide-react';
 
 interface SidebarProps {
   selectedDate: Date;
@@ -14,10 +14,6 @@ interface SidebarProps {
   onAddEventClick: () => void;
   instructors: Instructor[];
   locations: Location[];
-  
-  // Status Filters
-  selectedStatuses: TrainingStatus[];
-  onToggleStatus: (status: TrainingStatus) => void;
   
   // Instructor Filters
   selectedInstructorIds: string[];
@@ -36,8 +32,6 @@ export default function Sidebar({
   onAddEventClick,
   instructors,
   locations,
-  selectedStatuses,
-  onToggleStatus,
   selectedInstructorIds,
   onToggleInstructor,
   onClearInstructorFilters,
@@ -66,68 +60,6 @@ export default function Sidebar({
       {/* Filter Sections Container */}
       <div className="space-y-5 rounded-xl border border-slate-100 bg-slate-50/50 p-4">
         
-        {/* Statuses Checkboxes (Meus Calendários) */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <CalendarRange className="h-3.5 w-3.5 text-slate-400" />
-              Meus Calendários
-            </h5>
-          </div>
-          <div className="space-y-2">
-            {/* Confirmados */}
-            <label className="flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer group">
-              <div className="relative flex items-center justify-center">
-                <input
-                  id="status-filter-confirmado"
-                  type="checkbox"
-                  checked={selectedStatuses.includes('confirmado')}
-                  onChange={() => onToggleStatus('confirmado')}
-                  className="peer h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-100 cursor-pointer"
-                />
-              </div>
-              <span className="flex items-center gap-2 group-hover:text-slate-900 transition-colors">
-                <span className="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-200" />
-                Treinamentos Confirmados
-              </span>
-            </label>
-
-            {/* Aguardando */}
-            <label className="flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer group">
-              <div className="relative flex items-center justify-center">
-                <input
-                  id="status-filter-aguardando"
-                  type="checkbox"
-                  checked={selectedStatuses.includes('aguardando')}
-                  onChange={() => onToggleStatus('aguardando')}
-                  className="peer h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-100 cursor-pointer"
-                />
-              </div>
-              <span className="flex items-center gap-2 group-hover:text-slate-900 transition-colors">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-200" />
-                Aguardando Confirmação
-              </span>
-            </label>
-
-            {/* Cancelados */}
-            <label className="flex items-center gap-2.5 text-sm text-slate-600 cursor-pointer group">
-              <div className="relative flex items-center justify-center">
-                <input
-                  id="status-filter-cancelado"
-                  type="checkbox"
-                  checked={selectedStatuses.includes('cancelado')}
-                  onChange={() => onToggleStatus('cancelado')}
-                  className="peer h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-100 cursor-pointer"
-                />
-              </div>
-              <span className="flex items-center gap-2 group-hover:text-slate-900 transition-colors">
-                <span className="h-2.5 w-2.5 rounded-full bg-slate-400" />
-                Cancelados
-              </span>
-            </label>
-          </div>
-        </div>
-
         {/* Filter by Instructor */}
         <div className="space-y-3 pt-1">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">

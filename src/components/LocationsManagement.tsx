@@ -185,11 +185,7 @@ export default function LocationsManagement({
                   </button>
                   <button
                     id={`delete-loc-${loc.id}`}
-                    onClick={() => {
-                      if (confirm(`Tem certeza de que deseja excluir o local "${loc.name}"? Os treinamentos associados a ele continuarão agendados, mas perderão a referência de local.`)) {
-                        onDeleteLocation(loc.id);
-                      }
-                    }}
+                    onClick={() => onDeleteLocation(loc.id)}
                     className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

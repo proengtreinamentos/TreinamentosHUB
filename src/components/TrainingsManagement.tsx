@@ -370,11 +370,7 @@ export default function TrainingsManagement({
                           {/* Delete */}
                           <button
                             id={`delete-train-${t.id}`}
-                            onClick={() => {
-                              if (confirm(`Excluir permanentemente o treinamento "${t.title}" do cronograma?`)) {
-                                onDeleteTraining(t.id);
-                              }
-                            }}
+                            onClick={() => onDeleteTraining(t.id)}
                             title="Excluir treinamento"
                             className="text-slate-400 hover:text-rose-600 transition-colors p-1 rounded hover:bg-slate-100 cursor-pointer"
                           >

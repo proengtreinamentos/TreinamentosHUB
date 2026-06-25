@@ -36,6 +36,7 @@ import DayView from './components/DayView';
 import InstructorModal from './components/InstructorModal';
 import LocationModal from './components/LocationModal';
 import TrainingModal from './components/TrainingModal';
+import ConfirmationModal from './components/ConfirmationModal';
 
 // CRUD Screens
 import InstructorsManagement from './components/InstructorsManagement';
@@ -121,6 +122,14 @@ export default function App() {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [editingTraining, setEditingTraining] = useState<Training | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
+
+  // Confirmation modal state
+  const [confirmDelete, setConfirmDelete] = useState<{
+    type: 'instructor' | 'location' | 'training';
+    id: string;
+    title: string;
+    message: string;
+  } | null>(null);
 
   // Notifications
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -230,11 +239,13 @@ export default function App() {
     setTrainings(updatedTrainings);
 
     try {
-      await dbDeleteInstructor(id);
+      // 1. Desvincular treinamentos primeiro no banco para evitar erro de FK (Foreign Key)
       const affectedTrainings = trainings.filter((t) => t.instructorId === id);
       for (const t of affectedTrainings) {
         await dbSaveTraining({ ...t, instructorId: '' });
       }
+      // 2. Só então excluir o instrutor
+      await dbDeleteInstructor(id);
       triggerToast('Instrutor removido e treinamentos desvinculados.', 'info');
     } catch (err) {
       triggerToast('Sincronizado localmente. Erro ao excluir na nuvem.', 'info');
@@ -275,11 +286,13 @@ export default function App() {
     setTrainings(updatedTrainings);
 
     try {
-      await dbDeleteLocation(id);
+      // 1. Desvincular treinamentos primeiro no banco para evitar erro de FK (Foreign Key)
       const affectedTrainings = trainings.filter((t) => t.locationId === id);
       for (const t of affectedTrainings) {
         await dbSaveTraining({ ...t, locationId: '' });
       }
+      // 2. Só então excluir o local
+      await dbDeleteLocation(id);
       triggerToast('Local removido e treinamentos desvinculados.', 'info');
     } catch (err) {
       triggerToast('Sincronizado localmente. Erro ao excluir na nuvem.', 'info');
@@ -321,6 +334,56 @@ export default function App() {
       triggerToast('Treinamento excluído com sucesso.', 'info');
     } catch (err) {
       triggerToast('Sincronizado localmente. Erro ao excluir na nuvem.', 'info');
+    }
+  };
+
+  // ----------------------------------------------------
+  // UNIFIED DELETION TRIGGERS (CUSTOM MODAL CONFIRMATION)
+  // ----------------------------------------------------
+  const handleDeleteLocationTrigger = (id: string) => {
+    const loc = locations.find((l) => l.id === id);
+    if (!loc) return;
+    setConfirmDelete({
+      type: 'location',
+      id,
+      title: 'Excluir Local',
+      message: `Tem certeza de que deseja excluir o local "${loc.name}"? Os treinamentos associados a ele continuarão agendados, mas perderão a referência de local.`,
+    });
+  };
+
+  const handleDeleteInstructorTrigger = (id: string) => {
+    const inst = instructors.find((i) => i.id === id);
+    if (!inst) return;
+    setConfirmDelete({
+      type: 'instructor',
+      id,
+      title: 'Excluir Instrutor',
+      message: `Tem certeza de que deseja excluir o instrutor "${inst.name}"? Isso não removerá os treinamentos, mas eles perderão o vínculo.`,
+    });
+  };
+
+  const handleDeleteTrainingTrigger = (id: string) => {
+    const t = trainings.find((tr) => tr.id === id);
+    if (!t) return;
+    setConfirmDelete({
+      type: 'training',
+      id,
+      title: 'Excluir Treinamento',
+      message: `Deseja realmente excluir permanentemente o treinamento "${t.title}" do cronograma?`,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    const { type, id } = confirmDelete;
+    setConfirmDelete(null);
+
+    if (type === 'location') {
+      await handleDeleteLocation(id);
+    } else if (type === 'instructor') {
+      await handleDeleteInstructor(id);
+    } else if (type === 'training') {
+      await handleDeleteTraining(id);
     }
   };
 
@@ -447,7 +510,7 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-md font-black tracking-tight text-slate-900 leading-none">
-              Portal de Treinamentos
+              Portal de Treinamento - Proeng
             </h1>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-1">
               Plataforma Corporativa
@@ -554,8 +617,6 @@ export default function App() {
                 }}
                 instructors={instructors}
                 locations={locations}
-                selectedStatuses={selectedStatuses}
-                onToggleStatus={handleToggleStatus}
                 selectedInstructorIds={selectedInstructorIds}
                 onToggleInstructor={handleToggleInstructor}
                 onClearInstructorFilters={() => setSelectedInstructorIds([])}
@@ -663,7 +724,7 @@ export default function App() {
               setEditingInstructor(inst);
               setActiveModal('instructor');
             }}
-            onDeleteInstructor={handleDeleteInstructor}
+            onDeleteInstructor={handleDeleteInstructorTrigger}
           />
         )}
 
@@ -679,7 +740,7 @@ export default function App() {
               setEditingLocation(loc);
               setActiveModal('location');
             }}
-            onDeleteLocation={handleDeleteLocation}
+            onDeleteLocation={handleDeleteLocationTrigger}
           />
         )}
 
@@ -698,7 +759,7 @@ export default function App() {
               setActiveModal('training');
             }}
             onDuplicateTraining={handleDuplicateTraining}
-            onDeleteTraining={handleDeleteTraining}
+            onDeleteTraining={handleDeleteTrainingTrigger}
           />
         )}
       </main>
@@ -740,6 +801,16 @@ export default function App() {
         instructors={instructors}
         locations={locations}
         defaultDate={modalDefaultDate}
+      />
+
+      {/* Confirmation Dialog */}
+      <ConfirmationModal
+        isOpen={!!confirmDelete}
+        title={confirmDelete?.title || ''}
+        message={confirmDelete?.message || ''}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+        isDestructive={true}
       />
 
       {/* 🚀 TOAST ALERTS OVERLAY */}

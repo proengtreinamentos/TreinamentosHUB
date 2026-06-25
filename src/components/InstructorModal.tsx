@@ -16,16 +16,51 @@ interface InstructorModalProps {
 
 const PRESET_COLORS = [
   '#3b82f6', // Royal Blue
+  '#1d4ed8', // Dark Blue
+  '#06b6d4', // Cyan
   '#10b981', // Emerald Green
-  '#f97316', // Orange
-  '#ec4899', // Pink
-  '#a855f7', // Purple
-  '#0d9488', // Teal
+  '#059669', // Dark Green
+  '#84cc16', // Lime Green
   '#eab308', // Amber
+  '#f59e0b', // Gold/Yellow
+  '#f97316', // Orange
+  '#ea580c', // Deep Orange
   '#ef4444', // Red
+  '#b91c1c', // Crimson Red
+  '#ec4899', // Pink
+  '#db2777', // Deep Pink
+  '#a855f7', // Purple
+  '#7c3aed', // Violet
   '#6366f1', // Indigo
+  '#0d9488', // Teal
   '#14b8a6', // Turquoise
+  '#64748b', // Slate
 ];
+
+// Helper to format Brazilian phone numbers automatically
+export function formatBrazilianPhone(value: string): string {
+  // Remove non-digit characters
+  const cleaned = value.replace(/\D/g, '');
+  
+  // Truncate to maximum 11 digits
+  const truncated = cleaned.slice(0, 11);
+  
+  const len = truncated.length;
+  if (len === 0) {
+    return '';
+  }
+  if (len <= 2) {
+    return `(${truncated}`;
+  }
+  if (len <= 6) {
+    return `(${truncated.slice(0, 2)}) ${truncated.slice(2)}`;
+  }
+  if (len <= 10) {
+    return `(${truncated.slice(0, 2)}) ${truncated.slice(2, 6)}-${truncated.slice(6)}`;
+  }
+  // 11 digits: (XX) XXXXX-XXXX
+  return `(${truncated.slice(0, 2)}) ${truncated.slice(2, 7)}-${truncated.slice(7)}`;
+}
 
 export default function InstructorModal({ isOpen, onClose, onSave, instructor }: InstructorModalProps) {
   const [name, setName] = useState('');
@@ -41,7 +76,7 @@ export default function InstructorModal({ isOpen, onClose, onSave, instructor }:
       setSpecialty(instructor.specialty);
       setColor(instructor.color);
       setEmail(instructor.email || '');
-      setPhone(instructor.phone || '');
+      setPhone(formatBrazilianPhone(instructor.phone || ''));
     } else {
       setName('');
       setSpecialty('');
@@ -161,7 +196,7 @@ export default function InstructorModal({ isOpen, onClose, onSave, instructor }:
                 id="instructor-phone-input"
                 type="text"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(formatBrazilianPhone(e.target.value))}
                 placeholder="Ex: (11) 99999-9999"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
               />
@@ -191,17 +226,34 @@ export default function InstructorModal({ isOpen, onClose, onSave, instructor }:
                   </button>
                 ))}
                 
-                {/* Custom Color Input */}
-                <div className="relative flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 shadow-sm overflow-hidden hover:scale-110 active:scale-95 transition-transform">
+                {/* Custom Color Input - Redesigned as a beautiful color wheel / interactive custom button */}
+                <div 
+                  className="relative flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 shadow-sm hover:scale-110 active:scale-95 transition-all cursor-pointer overflow-hidden group"
+                  title="Criar cor personalizada"
+                  style={{
+                    backgroundColor: !PRESET_COLORS.includes(color) ? color : 'transparent',
+                    backgroundImage: PRESET_COLORS.includes(color) 
+                      ? 'linear-gradient(135deg, #ff0055 0%, #00ffcc 100%)' 
+                      : 'none',
+                  }}
+                >
                   <input
                     id="instructor-custom-color"
                     type="color"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
-                    className="absolute inset-0 h-12 w-12 -translate-x-2 -translate-y-2 cursor-pointer border-0 p-0"
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0 z-10"
                   />
+                  {!PRESET_COLORS.includes(color) ? (
+                    <Check className="h-4 w-4 stroke-[3px] text-white drop-shadow-sm pointer-events-none z-0" />
+                  ) : (
+                    <span className="text-white font-black text-sm select-none drop-shadow-sm group-hover:scale-110 transition-transform pointer-events-none z-0">+</span>
+                  )}
                 </div>
-                <span className="text-xs text-slate-500 font-mono">{color}</span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-400 font-medium">Personalizada</span>
+                  <span className="text-xs text-slate-600 font-mono font-semibold">{color}</span>
+                </div>
               </div>
             </div>
           </div>

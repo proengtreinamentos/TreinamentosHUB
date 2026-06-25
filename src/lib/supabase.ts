@@ -7,15 +7,33 @@ import { createClient } from '@supabase/supabase-js';
 import { Instructor, Location, Training } from '../types';
 
 // Read environment variables (Vite-style)
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
+const rawSupabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
 const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+
+// Clean up Supabase URL if it contains /rest/v1 suffix to avoid double pathing issues
+const getCleanSupabaseUrl = (url: string | undefined): string | undefined => {
+  if (!url) return undefined;
+  let cleaned = url.trim();
+  if (cleaned.endsWith('/rest/v1/')) {
+    cleaned = cleaned.slice(0, -9);
+  } else if (cleaned.endsWith('/rest/v1')) {
+    cleaned = cleaned.slice(0, -8);
+  }
+  // Strip trailing slashes too just to be extra clean
+  while (cleaned.endsWith('/')) {
+    cleaned = cleaned.slice(0, -1);
+  }
+  return cleaned;
+};
+
+const supabaseUrl = getCleanSupabaseUrl(rawSupabaseUrl);
 
 // Check if Supabase credentials are provided
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
 // Lazy/Conditional initialization of the Supabase client
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl!, supabaseAnonKey)
   : null;
 
 // Helper to check if we are using the live Supabase database or LocalStorage fallback
