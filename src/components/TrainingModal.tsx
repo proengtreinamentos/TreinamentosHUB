@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Training, Instructor, Location, TrainingStatus } from '../types';
 import { X, Calendar, Clock, User, MapPin, AlignLeft, Info } from 'lucide-react';
 
@@ -26,38 +26,52 @@ export default function TrainingModal({
   locations,
   defaultDate,
 }: TrainingModalProps) {
-  const [title, setTitle] = useState('');
+  const titleRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
   const [instructorId, setInstructorId] = useState('');
   const [locationId, setLocationId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [date, setDate] = useState('');
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('17:00');
   const [status, setStatus] = useState<TrainingStatus>('confirmado');
-  const [description, setDescription] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (training) {
-      setTitle(training.title);
-      setInstructorId(training.instructorId);
-      setLocationId(training.locationId);
-      setStartDate(training.startDate);
-      setEndDate(training.endDate);
-      setStatus(training.status);
-      setDescription(training.description || '');
-    } else {
-      setTitle('');
-      setInstructorId(instructors[0]?.id || '');
-      setLocationId(locations[0]?.id || '');
-      
-      const targetDate = defaultDate || new Date().toISOString().split('T')[0];
-      setStartDate(`${targetDate}T08:00`);
-      setEndDate(`${targetDate}T12:00`);
-      
-      setStatus('confirmado');
-      setDescription('');
+    if (isOpen) {
+      if (training) {
+        if (titleRef.current) titleRef.current.value = training.title;
+        if (descriptionRef.current) descriptionRef.current.value = training.description || '';
+        
+        setInstructorId(training.instructorId);
+        setLocationId(training.locationId);
+        
+        // Split ISO string 'YYYY-MM-DDTHH:MM'
+        const startParts = training.startDate.split('T');
+        const endParts = training.endDate.split('T');
+        
+        setDate(startParts[0] || '');
+        setStartTime(startParts[1]?.substring(0, 5) || '08:00');
+        setEndTime(endParts[1]?.substring(0, 5) || '17:00');
+        
+        setStatus(training.status);
+      } else {
+        if (titleRef.current) titleRef.current.value = '';
+        if (descriptionRef.current) descriptionRef.current.value = '';
+        
+        setInstructorId(''); // Start empty as requested
+        setLocationId(locations[0]?.id || '');
+        
+        const targetDate = defaultDate || new Date().toISOString().split('T')[0];
+        setDate(targetDate);
+        setStartTime('08:00');
+        setEndTime('17:00');
+        
+        setStatus('confirmado');
+      }
+      setError('');
     }
-    setError('');
-  }, [training, isOpen, defaultDate, instructors, locations]);
+  }, [training, isOpen, defaultDate, locations]);
 
   if (!isOpen) return null;
 
@@ -65,7 +79,8 @@ export default function TrainingModal({
     e.preventDefault();
     setError('');
 
-    if (!title.trim()) {
+    const titleVal = titleRef.current?.value || '';
+    if (!titleVal.trim()) {
       setError('O título do treinamento é obrigatório.');
       return;
     }
@@ -77,32 +92,39 @@ export default function TrainingModal({
       setError('É necessário selecionar um local.');
       return;
     }
-    if (!startDate) {
-      setError('A data e hora de início são obrigatórias.');
+    if (!date) {
+      setError('A data do treinamento é obrigatória.');
       return;
     }
-    if (!endDate) {
-      setError('A data e hora de término são obrigatórias.');
+    if (!startTime) {
+      setError('O horário de início é obrigatório.');
+      return;
+    }
+    if (!endTime) {
+      setError('O horário de término é obrigatório.');
       return;
     }
 
-    const startMs = new Date(startDate).getTime();
-    const endMs = new Date(endDate).getTime();
+    const startIso = `${date}T${startTime}`;
+    const endIso = `${date}T${endTime}`;
+
+    const startMs = new Date(startIso).getTime();
+    const endMs = new Date(endIso).getTime();
 
     if (endMs <= startMs) {
-      setError('A data/hora de término deve ser posterior ao início do treinamento.');
+      setError('O horário de término deve ser posterior ao início do treinamento.');
       return;
     }
 
     onSave({
       id: training?.id,
-      title: title.trim(),
+      title: titleVal.trim(),
       instructorId,
       locationId,
-      startDate,
-      endDate,
+      startDate: startIso,
+      endDate: endIso,
       status,
-      description: description.trim() || undefined,
+      description: descriptionRef.current?.value.trim() || undefined,
     });
     onClose();
   };
@@ -144,8 +166,7 @@ export default function TrainingModal({
               <input
                 id="training-title-input"
                 type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                ref={titleRef}
                 placeholder="Ex: Integração - Natura, NR 35 Trabalho em Altura..."
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                 required
@@ -170,9 +191,10 @@ export default function TrainingModal({
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all bg-white"
                     required
                   >
+                    <option value="" disabled>Selecione um instrutor...</option>
                     {instructors.map((inst) => (
                       <option key={inst.id} value={inst.id}>
-                        {inst.name} ({inst.specialty})
+                        {inst.name}
                       </option>
                     ))}
                   </select>
@@ -205,35 +227,51 @@ export default function TrainingModal({
               </div>
             </div>
 
-            {/* Grid Datas */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Início */}
+            {/* Day and Time Selection (Single day, start time and end time) */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {/* Dia */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
                   <Calendar className="h-4 w-4 text-slate-400" />
-                  Início <span className="text-rose-500">*</span>
+                  Dia <span className="text-rose-500">*</span>
                 </label>
                 <input
-                  id="training-start-date"
-                  type="datetime-local"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  id="training-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                   required
                 />
               </div>
 
-              {/* Fim */}
+              {/* Hora Início */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
                   <Clock className="h-4 w-4 text-slate-400" />
-                  Término <span className="text-rose-500">*</span>
+                  Hora Início <span className="text-rose-500">*</span>
                 </label>
                 <input
-                  id="training-end-date"
-                  type="datetime-local"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  id="training-start-time"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
+                  required
+                />
+              </div>
+
+              {/* Hora Fim */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
+                  <Clock className="h-4 w-4 text-slate-400" />
+                  Hora Término <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  id="training-end-time"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
                   required
                 />
@@ -298,8 +336,7 @@ export default function TrainingModal({
               <textarea
                 id="training-description-textarea"
                 rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                ref={descriptionRef}
                 placeholder="Detalhes sobre a ementa do treinamento, pré-requisitos dos participantes, materiais de apoio necessários..."
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all resize-none"
               />

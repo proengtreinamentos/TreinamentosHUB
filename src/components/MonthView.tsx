@@ -192,13 +192,21 @@ export default function MonthView({
                         </span>
                       </div>
 
-                      {/* Location details */}
-                      {location && (
-                        <div className="flex items-center gap-0.5 mt-0.5 text-[9px] text-slate-500 truncate select-none">
-                          <MapPin className="h-2 w-2 flex-shrink-0 text-slate-400" />
-                          <span className="truncate">{location.name}</span>
-                        </div>
-                      )}
+                      {/* Location & Instructor details */}
+                      <div className="flex flex-col gap-0.5 mt-0.5 text-[9px] text-slate-500 truncate select-none">
+                        {location && (
+                          <div className="flex items-center gap-0.5 truncate">
+                            <MapPin className="h-2 w-2 flex-shrink-0 text-slate-400" />
+                            <span className="truncate">{location.name}</span>
+                          </div>
+                        )}
+                        {instructor && (
+                          <div className="flex items-center gap-0.5 truncate">
+                            <User className="h-2 w-2 flex-shrink-0 text-slate-400" />
+                            <span className="truncate font-medium">{instructor.name}</span>
+                          </div>
+                        )}
+                      </div>
 
                       {/* Wait/Orange Badge */}
                       {isWaiting && (

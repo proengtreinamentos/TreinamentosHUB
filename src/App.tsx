@@ -573,18 +573,8 @@ export default function App() {
           </button>
         </nav>
 
-        {/* Right Info: local cache indicator + Reset Button */}
+        {/* Right Info: local cache indicator */}
         <div className="flex items-center gap-3 self-end sm:self-auto">
-          <button
-            id="reset-demo-btn"
-            onClick={resetToSeeds}
-            title="Redefinir para dados do exemplo"
-            className="flex items-center gap-1.5 text-2xs font-extrabold text-slate-500 hover:text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white shadow-sm transition-all cursor-pointer"
-          >
-            <RefreshCw className="h-3 w-3" />
-            Redefinir Exemplo
-          </button>
-
           {isSupabaseConfigured ? (
             <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 border border-blue-100 text-[10px] font-bold text-blue-800 shadow-sm shadow-blue-50 select-none" title="Conectado com sucesso ao banco de dados Supabase na nuvem!">
               <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
