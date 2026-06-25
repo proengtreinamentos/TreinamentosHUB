@@ -1,0 +1,6 @@
+{
+  "name": "Calendário de Treinamentos",
+  "description": "Sistema interativo para agendamento e gerenciamento de treinamentos corporativos, instrutores e locais com visualização estilo Outlook e recurso drag-and-drop.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
