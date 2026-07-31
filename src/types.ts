@@ -32,4 +32,5 @@ export interface Training {
   endDate: string;   // ISO format: YYYY-MM-DDTHH:MM
   status: TrainingStatus;
   description?: string;
+  customColor?: string; // Optional custom color override (hex or Tailwind)
 }

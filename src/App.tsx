@@ -31,6 +31,7 @@ import CalendarHeader, { CalendarViewType } from './components/CalendarHeader';
 import MonthView from './components/MonthView';
 import WeekView from './components/WeekView';
 import DayView from './components/DayView';
+import InteractiveCalendarView from './components/InteractiveCalendarView';
 
 // Modals
 import InstructorModal from './components/InstructorModal';
@@ -56,7 +57,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-type TabType = 'calendario' | 'instrutores' | 'locais' | 'treinamentos';
+type TabType = 'calendario' | 'interativo' | 'treinamentos' | 'instrutores' | 'locais';
 
 interface Toast {
   id: string;
@@ -139,7 +140,30 @@ export default function App() {
     const loadAllData = async () => {
       try {
         const dbInstructors = await dbGetInstructors(INITIAL_INSTRUCTORS);
-        setInstructors(dbInstructors);
+        
+        // Map exact colors from image by instructor name
+        const imageColorsMap: Record<string, string> = {
+          'admir ventura': '#f24e1e',
+          'alexandre rivellino': '#0b41cd',
+          'jaqueline daiane': '#008b8b',
+          'leandro manha': '#6b21a8',
+          'naiara cristina': '#e5a000',
+          'thiago anjos': '#18181b',
+        };
+
+        let updatedInstructors = dbInstructors.map((inst) => {
+          const matched = imageColorsMap[inst.name.trim().toLowerCase()];
+          return matched ? { ...inst, color: matched } : inst;
+        });
+
+        // Ensure we load the complete updated list of instructors from INITIAL_INSTRUCTORS
+        const hasTargetInstructors = updatedInstructors.some((i) => imageColorsMap[i.name.trim().toLowerCase()]);
+        if (!hasTargetInstructors || updatedInstructors.length < 6) {
+          updatedInstructors = INITIAL_INSTRUCTORS;
+        }
+
+        setInstructors(updatedInstructors);
+        localStorage.setItem('tr_instructors', JSON.stringify(updatedInstructors));
 
         const dbLocations = await dbGetLocations(INITIAL_LOCATIONS);
         setLocations(dbLocations);
@@ -532,6 +556,19 @@ export default function App() {
             <CalendarIcon className="h-4 w-4" />
             Agenda Calendário
           </button>
+
+          <button
+            id="tab-interativo"
+            onClick={() => setActiveTab('interativo')}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'interativo'
+                ? 'bg-[#0e223d] text-white shadow-sm border border-[#1b3a63]'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <Sparkles className="h-4 w-4 text-blue-500" />
+            Calendário Interativo
+          </button>
           
           <button
             id="tab-treinamentos"
@@ -700,6 +737,18 @@ export default function App() {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'interativo' && (
+          <InteractiveCalendarView
+            currentDate={currentDate}
+            onNavigate={handleNavigate}
+            trainings={trainings}
+            instructors={instructors}
+            locations={locations}
+            onSaveTraining={handleSaveTraining}
+            onDeleteTraining={handleDeleteTraining}
+          />
         )}
 
         {activeTab === 'instrutores' && (

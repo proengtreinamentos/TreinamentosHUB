@@ -147,7 +147,7 @@ export default function MonthView({
               </div>
 
               {/* Trainings List in this Day */}
-              <div className="flex flex-col gap-1 overflow-y-auto max-h-[85px] scrollbar-thin pr-0.5">
+              <div className="flex-1 flex flex-col gap-1 overflow-y-auto min-h-0 pr-0.5">
                 {dayTrainings.map((training) => {
                   const instructor = instructorsMap.get(training.instructorId);
                   const location = locationsMap.get(training.locationId);
@@ -165,6 +165,9 @@ export default function MonthView({
                   const borderStyle = isCanceled
                     ? 'border-l-4 border-slate-300 border-dashed'
                     : `border-l-4`;
+
+                  // Only show details if it is the only training of the day to maximize space
+                  const showDetails = dayTrainings.length === 1;
 
                   return (
                     <div
@@ -193,20 +196,22 @@ export default function MonthView({
                       </div>
 
                       {/* Location & Instructor details */}
-                      <div className="flex flex-col gap-0.5 mt-0.5 text-[9px] text-slate-500 truncate select-none">
-                        {location && (
-                          <div className="flex items-center gap-0.5 truncate">
-                            <MapPin className="h-2 w-2 flex-shrink-0 text-slate-400" />
-                            <span className="truncate">{location.name}</span>
-                          </div>
-                        )}
-                        {instructor && (
-                          <div className="flex items-center gap-0.5 truncate">
-                            <User className="h-2 w-2 flex-shrink-0 text-slate-400" />
-                            <span className="truncate font-medium">{instructor.name}</span>
-                          </div>
-                        )}
-                      </div>
+                      {showDetails && (
+                        <div className="flex flex-col gap-0.5 mt-0.5 text-[9px] text-slate-500 truncate select-none">
+                          {location && (
+                            <div className="flex items-center gap-0.5 truncate">
+                              <MapPin className="h-2 w-2 flex-shrink-0 text-slate-400" />
+                              <span className="truncate">{location.name}</span>
+                            </div>
+                          )}
+                          {instructor && (
+                            <div className="flex items-center gap-0.5 truncate">
+                              <User className="h-2 w-2 flex-shrink-0 text-slate-400" />
+                              <span className="truncate font-medium">{instructor.name}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Wait/Orange Badge */}
                       {isWaiting && (

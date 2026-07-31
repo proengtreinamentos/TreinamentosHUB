@@ -8,43 +8,51 @@ import { Instructor, Location, Training } from '../types';
 export const INITIAL_INSTRUCTORS: Instructor[] = [
   {
     id: 'inst-1',
-    name: 'Juliana Costa',
-    color: '#ec4899', // Pink
-    specialty: 'Integração e Integração de Clientes',
-    email: 'juliana.costa@empresa.com',
+    name: 'Admir Ventura',
+    color: '#f24e1e', // Laranja/Vermelho
+    specialty: 'Segurança do Trabalho & NR 10 / NR 35',
+    email: 'admir.ventura@proeng.com',
     phone: '(11) 98765-4321',
   },
   {
     id: 'inst-2',
-    name: 'Carlos Souza',
-    color: '#3b82f6', // Royal Blue
-    specialty: 'Segurança do Trabalho & Ponte Rolante',
-    email: 'carlos.souza@empresa.com',
+    name: 'Alexandre Rivellino',
+    color: '#0b41cd', // Azul Royal
+    specialty: 'Integrações & Operações Industriais',
+    email: 'alexandre.rivellino@proeng.com',
     phone: '(11) 91234-5678',
   },
   {
     id: 'inst-3',
-    name: 'Roberto Santos',
-    color: '#10b981', // Emerald Green
-    specialty: 'Normas Regulamentadoras (NR 33, NR 35)',
-    email: 'roberto.santos@empresa.com',
+    name: 'Jaqueline Daiane',
+    color: '#008b8b', // Verde Água / Teal
+    specialty: 'NR 20 & Processos Operacionais',
+    email: 'jaqueline.daiane@proeng.com',
     phone: '(11) 92345-6789',
   },
   {
     id: 'inst-4',
-    name: 'Aline Pereira',
-    color: '#a855f7', // Purple
-    specialty: 'Desenvolvimento e Metodologia de Ensino',
-    email: 'aline.pereira@empresa.com',
+    name: 'Leandro Manha',
+    color: '#6b21a8', // Roxo
+    specialty: 'NR 33, NR 35 & Resgate',
+    email: 'leandro.manha@proeng.com',
     phone: '(11) 93456-7890',
   },
   {
     id: 'inst-5',
-    name: 'Marcos Oliveira',
-    color: '#f97316', // Orange
-    specialty: 'Operações Logísticas e Técnicas',
-    email: 'marcos.oliveira@empresa.com',
+    name: 'Naiara Cristina',
+    color: '#e5a000', // Amarelo
+    specialty: 'Primeiros Socorros & CIPA',
+    email: 'naiara.cristina@proeng.com',
     phone: '(11) 94567-8901',
+  },
+  {
+    id: 'inst-6',
+    name: 'Thiago Anjos',
+    color: '#18181b', // Preto
+    specialty: 'PEMT, Ecolab & Equipamentos',
+    email: 'thiago.anjos@proeng.com',
+    phone: '(11) 95678-9012',
   },
 ];
 

@@ -15,25 +15,16 @@ interface InstructorModalProps {
 }
 
 const PRESET_COLORS = [
+  '#f24e1e', // Laranja (Admir Ventura)
+  '#0b41cd', // Azul (Alexandre Rivellino)
+  '#008b8b', // Verde Água (Jaqueline Daiane)
+  '#6b21a8', // Roxo (Leandro Manha)
+  '#e5a000', // Amarelo (Naiara Cristina)
+  '#18181b', // Preto (Thiago Anjos)
   '#3b82f6', // Royal Blue
-  '#1d4ed8', // Dark Blue
-  '#06b6d4', // Cyan
   '#10b981', // Emerald Green
-  '#059669', // Dark Green
-  '#84cc16', // Lime Green
-  '#eab308', // Amber
-  '#f59e0b', // Gold/Yellow
-  '#f97316', // Orange
-  '#ea580c', // Deep Orange
   '#ef4444', // Red
-  '#b91c1c', // Crimson Red
   '#ec4899', // Pink
-  '#db2777', // Deep Pink
-  '#a855f7', // Purple
-  '#7c3aed', // Violet
-  '#6366f1', // Indigo
-  '#0d9488', // Teal
-  '#14b8a6', // Turquoise
   '#64748b', // Slate
 ];
 
