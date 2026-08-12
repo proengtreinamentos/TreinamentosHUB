@@ -22,7 +22,9 @@ import {
   MapPin,
   RefreshCw,
   Maximize2,
-  Minimize2
+  Minimize2,
+  BarChart3,
+  CheckCircle2
 } from 'lucide-react';
 
 interface InteractiveCalendarViewProps {
@@ -107,11 +109,54 @@ export default function InteractiveCalendarView({
     return hY === year && hM === month + 1;
   });
 
+  // Calculate active instructor IDs in the current visible grid / calendar month
+  const gridDateSet = new Set(gridDays.map((d) => formatDateString(d.date)));
+  const activeInstructorIdsInGrid = new Set<string>();
+  trainings.forEach((t) => {
+    const [tDateStr] = t.startDate.split('T');
+    if (gridDateSet.has(tDateStr) && t.instructorId) {
+      activeInstructorIdsInGrid.add(t.instructorId);
+    }
+  });
+
+  // Instructors list for calendar left sidebar (only those with assigned trainings in current view)
+  const calendarSidebarInstructors = instructors.filter((inst) =>
+    activeInstructorIdsInGrid.has(inst.id)
+  );
+
   // Filter state by selected instructor on left panel (null = show all)
   const [selectedInstructorFilter, setSelectedInstructorFilter] = useState<string | null>(null);
 
-  // Highlight notice box on left panel
-  const [highlightText, setHighlightText] = useState('Destaque: Feriado Municipal em 20/08 (Aniversário de São Bernardo do Campo)');
+  // Monthly statistics for current viewed month
+  const monthTrainings = trainings.filter((t) => {
+    if (t.status === 'cancelado') return false;
+    const [tY, tM] = t.startDate.split('T')[0].split('-').map(Number);
+    return tY === year && tM === month + 1;
+  });
+
+  const totalMonthTrainings = monthTrainings.length;
+
+  const now = new Date();
+  const realizadosCount = monthTrainings.filter((t) => {
+    const endDate = new Date(t.endDate || t.startDate);
+    return endDate.getTime() < now.getTime();
+  }).length;
+
+  const pendentesCount = monthTrainings.filter((t) => {
+    const endDate = new Date(t.endDate || t.startDate);
+    return endDate.getTime() >= now.getTime();
+  }).length;
+
+  const completionPercent = totalMonthTrainings > 0
+    ? Math.round((realizadosCount / totalMonthTrainings) * 100)
+    : 0;
+
+  // Highlight notice box on left panel (keyed by year-month)
+  const [monthlyHighlights, setMonthlyHighlights] = useState<Record<string, string>>({});
+  const yearMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const customHighlight = monthlyHighlights[yearMonthKey];
+  const hasCustomHighlight = Boolean(customHighlight && customHighlight.trim().length > 0);
+  const currentHighlightText = customHighlight ?? '';
   const [isEditingHighlight, setIsEditingHighlight] = useState(false);
 
   // Quick Add / Edit Modal state
@@ -283,13 +328,13 @@ export default function InteractiveCalendarView({
           </div>
         </div>
 
-        {/* Center: Slogan & Calendar Badge */}
+        {/* Center: Title & Calendar Badge */}
         <div className="hidden lg:flex items-center gap-3 bg-[#0a1c38]/80 px-4 py-2 rounded-2xl border border-slate-700/50">
           <div className="h-10 w-10 rounded-full border-2 border-white/80 flex items-center justify-center bg-blue-900/60 text-white shadow-md">
             <CalendarIcon className="h-5 w-5" />
           </div>
           <div className="text-xs font-medium text-slate-200">
-            <p>Planeje seu conhecimento.</p>
+            <p className="font-black text-white tracking-wider uppercase">GESTÃO DE TREINAMENTOS</p>
             <p className="font-extrabold text-red-500">Transforme resultados.</p>
           </div>
         </div>
@@ -372,11 +417,11 @@ export default function InteractiveCalendarView({
       {/* ============================================================ */}
       <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-5">
         
-        {/* LEFT PANEL: INSTRUTORES + DESTAQUE (Hidden in Fullscreen Mode) */}
+        {/* LEFT PANEL: INSTRUTORES + ESTATÍSTICAS + DESTAQUE (Hidden in Fullscreen Mode) */}
         {!isFullscreen && (
-          <div className="w-full md:w-60 lg:w-64 flex flex-col gap-4 flex-shrink-0">
+          <div className="w-full md:w-60 lg:w-64 flex flex-col gap-3.5 flex-shrink-0">
             
-            {/* INSTRUTORES Section Header */}
+            {/* 1. INSTRUTORES Section Header */}
             <div className="bg-[#001130] border border-slate-700 rounded-xl p-2.5 shadow-md flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="p-1 rounded-md bg-blue-600 text-white">
@@ -396,41 +441,119 @@ export default function InteractiveCalendarView({
               )}
             </div>
 
-            {/* Instructor Cards List (White cards like reference image) */}
-            <div className="flex flex-col gap-2">
-              {instructors.map((inst) => {
-                const isSelected = selectedInstructorFilter === inst.id;
-                
-                // Assign distinct colors matching image if needed
-                const avatarBg = inst.color || '#ea580c';
+            {/* Instructor Cards List (Only instructors with scheduled trainings in current calendar view) */}
+            <div className="flex flex-col gap-1.5">
+              {calendarSidebarInstructors.length > 0 ? (
+                calendarSidebarInstructors.map((inst) => {
+                  const isSelected = selectedInstructorFilter === inst.id;
+                  const avatarBg = inst.color || '#ea580c';
 
-                return (
-                  <button
-                    key={inst.id}
-                    onClick={() => setSelectedInstructorFilter(isSelected ? null : inst.id)}
-                    className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-all cursor-pointer shadow-sm ${
-                      isSelected
-                        ? 'bg-blue-50 ring-2 ring-blue-600 text-slate-900'
-                        : 'bg-white hover:bg-slate-100 text-slate-800'
-                    }`}
-                  >
-                    <div 
-                      className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-xs flex-shrink-0"
-                      style={{ backgroundColor: avatarBg }}
+                  return (
+                    <button
+                      key={inst.id}
+                      onClick={() => setSelectedInstructorFilter(isSelected ? null : inst.id)}
+                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer shadow-sm ${
+                        isSelected
+                          ? 'bg-blue-50 ring-2 ring-blue-600 text-slate-900'
+                          : 'bg-white hover:bg-slate-100 text-slate-800'
+                      }`}
                     >
-                      <User className="h-4 w-4 stroke-[2.5]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-slate-900 truncate leading-tight">
-                        {inst.name}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
+                      <div 
+                        className="h-7 w-7 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-xs flex-shrink-0"
+                        style={{ backgroundColor: avatarBg }}
+                      >
+                        <User className="h-3.5 w-3.5 stroke-[2.5]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black text-slate-900 truncate leading-tight">
+                          {inst.name}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="p-2.5 bg-white/10 rounded-xl text-center text-xs text-slate-300 font-medium border border-slate-700/50">
+                  Nenhum instrutor neste mês
+                </div>
+              )}
             </div>
 
-            {/* DESTAQUE & FERIADOS Card */}
+            {/* 2. ESTATÍSTICAS DO MÊS Card */}
+            <div className="bg-[#001130] border border-slate-700/80 rounded-2xl p-3.5 text-white shadow-xl flex flex-col gap-2.5">
+              <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-xs">
+                    <BarChart3 className="h-4 w-4 stroke-[2.5]" />
+                  </div>
+                  <span className="text-xs font-black tracking-wider uppercase text-white">
+                    Estatísticas do Mês
+                  </span>
+                </div>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800/60 uppercase">
+                  {MONTHS_PT[month]}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1.5 pt-0.5">
+                {/* Agendados */}
+                <div className="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border border-slate-700/40">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 rounded bg-blue-500/20 text-blue-400">
+                      <CalendarIcon className="h-3.5 w-3.5 stroke-[2.5]" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-200">Treinamentos agendados:</span>
+                  </div>
+                  <span className="text-xs font-black text-white px-2 py-0.5 rounded-md bg-blue-600/50 border border-blue-400/40">
+                    {totalMonthTrainings}
+                  </span>
+                </div>
+
+                {/* Realizados */}
+                <div className="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border border-slate-700/40">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 rounded bg-emerald-500/20 text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5 stroke-[2.5]" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-200">Realizados:</span>
+                  </div>
+                  <span className="text-xs font-black text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-600/40">
+                    {realizadosCount}
+                  </span>
+                </div>
+
+                {/* Pendentes */}
+                <div className="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border border-slate-700/40">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 rounded bg-amber-500/20 text-amber-400">
+                      <Clock className="h-3.5 w-3.5 stroke-[2.5]" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-200">Pendentes:</span>
+                  </div>
+                  <span className="text-xs font-black text-amber-400 px-2 py-0.5 rounded-md bg-amber-950/80 border border-amber-600/40">
+                    {pendentesCount}
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              {totalMonthTrainings > 0 && (
+                <div className="flex flex-col gap-1 pt-1 border-t border-slate-700/50">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-300">
+                    <span>Progresso de Conclusão</span>
+                    <span className="text-emerald-400 font-black">{completionPercent}%</span>
+                  </div>
+                  <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden border border-slate-700">
+                    <div 
+                      className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" 
+                      style={{ width: `${completionPercent}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. DESTAQUE & FERIADOS Card */}
             <div className="bg-white rounded-2xl p-3.5 border-2 border-red-500/80 text-slate-900 shadow-xl relative group mt-auto flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -444,36 +567,20 @@ export default function InteractiveCalendarView({
                 <button
                   onClick={() => setIsEditingHighlight(!isEditingHighlight)}
                   className="text-slate-400 hover:text-slate-700 p-1 rounded transition-colors cursor-pointer"
-                  title="Editar destaque"
+                  title="Editar destaque do mês"
                 >
                   <Edit3 className="h-3.5 w-3.5" />
                 </button>
               </div>
 
-              {currentMonthHolidays.length > 0 && (
-                <div className="bg-red-50/90 border border-red-200 rounded-xl p-2 flex flex-col gap-1">
-                  <span className="text-[10px] font-black uppercase text-red-700 tracking-wider">
-                    Feriados em {MONTHS_PT[month]}:
-                  </span>
-                  {currentMonthHolidays.map((h) => {
-                    const [, , hD] = h.dateStr.split('-');
-                    return (
-                      <div key={h.dateStr} className="flex items-start gap-1 text-2xs text-slate-800">
-                        <span className="font-black text-red-600">{hD}/{String(month + 1).padStart(2, '0')}:</span>
-                        <span className="font-extrabold truncate" title={h.name}>{h.name}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
               {isEditingHighlight ? (
                 <div className="flex flex-col gap-2">
                   <textarea
-                    value={highlightText}
-                    onChange={(e) => setHighlightText(e.target.value)}
+                    value={currentHighlightText}
+                    onChange={(e) => setMonthlyHighlights((prev) => ({ ...prev, [yearMonthKey]: e.target.value }))}
                     className="text-xs border border-slate-300 rounded-md p-2 w-full resize-none text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500"
                     rows={2}
+                    placeholder={`Destaque personalizado para ${MONTHS_PT[month]}...`}
                   />
                   <button
                     onClick={() => setIsEditingHighlight(false)}
@@ -483,9 +590,32 @@ export default function InteractiveCalendarView({
                   </button>
                 </div>
               ) : (
-                <p className="text-xs font-extrabold text-slate-800 leading-snug">
-                  {highlightText}
-                </p>
+                <>
+                  {hasCustomHighlight ? (
+                    <p className="text-xs font-extrabold text-slate-800 leading-snug">
+                      {currentHighlightText}
+                    </p>
+                  ) : currentMonthHolidays.length > 0 ? (
+                    <div className="bg-red-50/90 border border-red-200 rounded-xl p-2.5 flex flex-col gap-1">
+                      <span className="text-[10px] font-black uppercase text-red-700 tracking-wider">
+                        Feriados em {MONTHS_PT[month]}:
+                      </span>
+                      {currentMonthHolidays.map((h) => {
+                        const [, , hD] = h.dateStr.split('-');
+                        return (
+                          <div key={h.dateStr} className="flex items-start gap-1 text-xs text-slate-800">
+                            <span className="font-black text-red-600">{hD}/{String(month + 1).padStart(2, '0')}:</span>
+                            <span className="font-extrabold truncate" title={h.name}>{h.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-center text-xs font-bold text-slate-600">
+                      Sem feriados cadastrados em {MONTHS_PT[month]}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

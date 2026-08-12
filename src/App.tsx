@@ -148,16 +148,29 @@ export default function App() {
           'thiago anjos': '#18181b',
         };
 
-        let updatedInstructors = dbInstructors.map((inst) => {
-          const matched = imageColorsMap[inst.name.trim().toLowerCase()];
-          return matched ? { ...inst, color: matched } : inst;
-        });
+        // Legacy mock names to clean from old test runs
+        const legacyNamesToIgnore = new Set([
+          'jaqueline',
+          'thiago dos anjos',
+          'abel benatto',
+          'naiara custódio',
+          'josé ricardo',
+        ]);
 
-        // Ensure we load the complete updated list of instructors from INITIAL_INSTRUCTORS
-        const hasTargetInstructors = updatedInstructors.some((i) => imageColorsMap[i.name.trim().toLowerCase()]);
-        if (!hasTargetInstructors || updatedInstructors.length < 6) {
-          updatedInstructors = INITIAL_INSTRUCTORS;
-        }
+        let updatedInstructors = dbInstructors
+          .filter((inst) => !legacyNamesToIgnore.has(inst.name.trim().toLowerCase()))
+          .map((inst) => {
+            const matched = imageColorsMap[inst.name.trim().toLowerCase()];
+            return matched ? { ...inst, color: matched } : inst;
+          });
+
+        // Ensure all canonical seed instructors exist
+        const loadedIds = new Set(updatedInstructors.map((i) => i.id));
+        INITIAL_INSTRUCTORS.forEach((seedInst) => {
+          if (!loadedIds.has(seedInst.id)) {
+            updatedInstructors.push(seedInst);
+          }
+        });
 
         setInstructors(updatedInstructors);
         localStorage.setItem('tr_instructors', JSON.stringify(updatedInstructors));
@@ -204,7 +217,19 @@ export default function App() {
         return Array.from(map.values());
       };
 
-      const completeInstructors = mergeLists(instructors, INITIAL_INSTRUCTORS);
+      const legacyNamesToIgnore = new Set([
+        'jaqueline',
+        'thiago dos anjos',
+        'abel benatto',
+        'naiara custódio',
+        'josé ricardo',
+      ]);
+
+      const cleanedInstructors = instructors.filter(
+        (i) => !legacyNamesToIgnore.has(i.name.trim().toLowerCase())
+      );
+
+      const completeInstructors = mergeLists(cleanedInstructors, INITIAL_INSTRUCTORS);
       const completeLocations = mergeLists(locations, INITIAL_LOCATIONS);
       const completeTrainings = mergeLists(trainings, INITIAL_TRAININGS);
 
