@@ -25,8 +25,7 @@ import {
   dbDeleteLocation,
   dbGetTrainings,
   dbSaveTraining,
-  dbDeleteTraining,
-  dbSyncAllToSupabase
+  dbDeleteTraining
 } from './lib/supabase';
 
 // Components
@@ -260,40 +259,6 @@ export default function App() {
     await loadAllData(true);
   };
 
-  // Reset demo data
-  const resetToSeeds = async () => {
-    if (confirm('Deseja redefinir todo o sistema para os dados iniciais do exemplo? Seus cadastros atuais serão perdidos.')) {
-      setInstructors(INITIAL_INSTRUCTORS);
-      setLocations(INITIAL_LOCATIONS);
-      setTrainings(INITIAL_TRAININGS);
-      
-      localStorage.setItem('tr_instructors', JSON.stringify(INITIAL_INSTRUCTORS));
-      localStorage.setItem('tr_locations', JSON.stringify(INITIAL_LOCATIONS));
-      localStorage.setItem('tr_trainings', JSON.stringify(INITIAL_TRAININGS));
-      setCurrentDate(new Date());
-
-      if (isSupabaseConfigured) {
-        try {
-          triggerToast('Semeando dados iniciais no Supabase...', 'info');
-          for (const inst of INITIAL_INSTRUCTORS) {
-            await dbSaveInstructor(inst);
-          }
-          for (const loc of INITIAL_LOCATIONS) {
-            await dbSaveLocation(loc);
-          }
-          for (const t of INITIAL_TRAININGS) {
-            await dbSaveTraining(t);
-          }
-          triggerToast('Dados do Supabase redefinidos com sucesso!', 'success');
-        } catch (err) {
-          console.error('Erro ao semear dados no Supabase:', err);
-          triggerToast('Erro ao semear dados no banco. Redefinido localmente.', 'error');
-        }
-      } else {
-        triggerToast('Dados redefinidos com sucesso para o padrão do exemplo!', 'info');
-      }
-    }
-  };
 
   // ----------------------------------------------------
   // CRUD ACTIONS: INSTRUTORES
