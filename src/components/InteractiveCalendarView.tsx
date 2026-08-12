@@ -351,10 +351,11 @@ export default function InteractiveCalendarView({
           </div>
         </div>
 
-        {/* Center: Title Text (no card) */}
+        {/* Center: Title Text (no card, larger font) */}
         <div className="hidden lg:flex flex-col text-center">
-          <p className="text-xs font-black text-white tracking-widest uppercase">GESTÃO DE TREINAMENTOS</p>
-          <p className="text-xs font-extrabold text-red-500 tracking-tight">Transforme resultados.</p>
+          <p className="text-base sm:text-lg font-black text-white tracking-wider uppercase drop-shadow-xs">
+            GESTÃO DE TREINAMENTOS
+          </p>
         </div>
 
         {/* Right: Quick Controls & Standalone Fullscreen Button */}
@@ -497,58 +498,58 @@ export default function InteractiveCalendarView({
               )}
             </div>
 
-            {/* 2. ESTATÍSTICAS DO MÊS Card */}
-            <div className="bg-[#001130] border border-slate-700/80 rounded-2xl p-3.5 text-white shadow-xl flex flex-col gap-2.5">
-              <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
+            {/* 2. ESTATÍSTICAS DO MÊS Card (Redesigned matching system visual identity) */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 text-slate-900 shadow-md flex flex-col gap-2.5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-xs">
                     <BarChart3 className="h-4 w-4 stroke-[2.5]" />
                   </div>
-                  <span className="text-xs font-black tracking-wider uppercase text-white">
+                  <span className="text-xs font-black tracking-wider uppercase text-slate-900">
                     Estatísticas do Mês
                   </span>
                 </div>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800/60 uppercase">
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 uppercase">
                   {MONTHS_PT[month]}
                 </span>
               </div>
 
               <div className="flex flex-col gap-1.5 pt-0.5">
                 {/* Agendados */}
-                <div className="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border border-slate-700/40">
+                <div className="flex items-center justify-between bg-slate-50/80 p-2 rounded-xl border border-slate-200/60 hover:bg-slate-100/80 transition-colors">
                   <div className="flex items-center gap-2">
-                    <div className="p-1 rounded bg-blue-500/20 text-blue-400">
+                    <div className="p-1 rounded bg-blue-100 text-blue-600">
                       <CalendarIcon className="h-3.5 w-3.5 stroke-[2.5]" />
                     </div>
-                    <span className="text-xs font-bold text-slate-200">Treinamentos agendados:</span>
+                    <span className="text-xs font-extrabold text-slate-700">Treinamentos agendados:</span>
                   </div>
-                  <span className="text-xs font-black text-white px-2 py-0.5 rounded-md bg-blue-600/50 border border-blue-400/40">
+                  <span className="text-xs font-black text-blue-700 px-2 py-0.5 rounded-md bg-blue-100/80 border border-blue-200">
                     {totalMonthTrainings}
                   </span>
                 </div>
 
                 {/* Realizados */}
-                <div className="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border border-slate-700/40">
+                <div className="flex items-center justify-between bg-slate-50/80 p-2 rounded-xl border border-slate-200/60 hover:bg-slate-100/80 transition-colors">
                   <div className="flex items-center gap-2">
-                    <div className="p-1 rounded bg-emerald-500/20 text-emerald-400">
+                    <div className="p-1 rounded bg-emerald-100 text-emerald-600">
                       <CheckCircle2 className="h-3.5 w-3.5 stroke-[2.5]" />
                     </div>
-                    <span className="text-xs font-bold text-slate-200">Realizados:</span>
+                    <span className="text-xs font-extrabold text-slate-700">Realizados:</span>
                   </div>
-                  <span className="text-xs font-black text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-600/40">
+                  <span className="text-xs font-black text-emerald-700 px-2 py-0.5 rounded-md bg-emerald-100/80 border border-emerald-200">
                     {realizadosCount}
                   </span>
                 </div>
 
                 {/* Pendentes */}
-                <div className="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl border border-slate-700/40">
+                <div className="flex items-center justify-between bg-slate-50/80 p-2 rounded-xl border border-slate-200/60 hover:bg-slate-100/80 transition-colors">
                   <div className="flex items-center gap-2">
-                    <div className="p-1 rounded bg-amber-500/20 text-amber-400">
+                    <div className="p-1 rounded bg-amber-100 text-amber-600">
                       <Clock className="h-3.5 w-3.5 stroke-[2.5]" />
                     </div>
-                    <span className="text-xs font-bold text-slate-200">Pendentes:</span>
+                    <span className="text-xs font-bold text-slate-700">Pendentes:</span>
                   </div>
-                  <span className="text-xs font-black text-amber-400 px-2 py-0.5 rounded-md bg-amber-950/80 border border-amber-600/40">
+                  <span className="text-xs font-black text-amber-700 px-2 py-0.5 rounded-md bg-amber-100/80 border border-amber-200">
                     {pendentesCount}
                   </span>
                 </div>
@@ -556,14 +557,14 @@ export default function InteractiveCalendarView({
 
               {/* Progress Bar */}
               {totalMonthTrainings > 0 && (
-                <div className="flex flex-col gap-1 pt-1 border-t border-slate-700/50">
-                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-300">
+                <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-100">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-600">
                     <span>Progresso de Conclusão</span>
-                    <span className="text-emerald-400 font-black">{completionPercent}%</span>
+                    <span className="text-emerald-600 font-black">{completionPercent}%</span>
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden border border-slate-700">
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/80">
                     <div 
-                      className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" 
+                      className="bg-emerald-500 h-2 rounded-full transition-all duration-500 shadow-xs" 
                       style={{ width: `${completionPercent}%` }}
                     />
                   </div>
@@ -686,12 +687,12 @@ export default function InteractiveCalendarView({
                 <div
                   key={cell.key}
                   onClick={() => handleOpenNewForDate(dateStr)}
-                  className={`min-h-[120px] sm:min-h-[145px] p-1.5 flex flex-col gap-1 transition-colors cursor-pointer relative group border-r border-b border-slate-300/80 ${
-                    holiday
+                  className={`min-h-[120px] sm:min-h-[145px] p-1.5 flex flex-col gap-1 transition-all cursor-pointer relative group border-r border-b border-slate-300/80 ${
+                    !cell.isCurrentMonth
+                      ? 'bg-slate-100/80 text-slate-400 opacity-40 grayscale-[25%] hover:opacity-90 hover:grayscale-0'
+                      : holiday
                       ? 'bg-amber-50/60 hover:bg-amber-100/70'
-                      : cell.isCurrentMonth
-                      ? 'bg-[#f8fafc] text-slate-800 hover:bg-blue-50/70'
-                      : 'bg-slate-100/90 text-slate-400 hover:bg-slate-200/70'
+                      : 'bg-[#f8fafc] text-slate-800 hover:bg-blue-50/70'
                   }`}
                 >
                   {/* Top Day Number Header */}
