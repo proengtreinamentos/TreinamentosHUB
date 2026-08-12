@@ -218,18 +218,19 @@ export default function WeekView({
                         {training.title}
                       </div>
 
-                      {/* Instructor name */}
-                      {instructor && (
-                        <div className="text-[9px] font-semibold text-slate-600 mt-1 truncate">
-                          {instructor.name}
-                        </div>
-                      )}
-
-                      {/* Location */}
-                      {location && (
-                        <div className="flex items-center gap-0.5 text-[8.5px] text-slate-500 mt-0.5 truncate">
-                          <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-slate-400" />
-                          <span className="truncate">{location.name}</span>
+                      {/* Instructor name & Location on the same line */}
+                      {(instructor || location) && (
+                        <div className="flex items-center gap-1 text-[9px] font-semibold text-slate-700 mt-0.5 truncate">
+                          {instructor && (
+                            <span className="truncate font-bold text-slate-800">{instructor.name}</span>
+                          )}
+                          {instructor && location && <span className="text-slate-400 font-normal flex-shrink-0">•</span>}
+                          {location && (
+                            <span className="flex items-center gap-0.5 text-slate-500 truncate flex-shrink min-w-0">
+                              <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-slate-400" />
+                              <span className="truncate">{location.name}</span>
+                            </span>
+                          )}
                         </div>
                       )}
 

@@ -441,6 +441,34 @@ export default function App() {
     });
   };
 
+  const handleBulkDeleteTrainings = (ids: string[]) => {
+    if (ids.length === 0) return;
+    setConfirmDelete({
+      type: 'bulk_trainings',
+      id: ids.join(','),
+      title: 'Excluir Treinamentos Selecionados',
+      message: `Tem certeza de que deseja excluir permanentemente os ${ids.length} treinamentos selecionados do cronograma? Esta ação não poderá ser desfeita.`,
+    });
+  };
+
+  const handleBulkUpdateStatusTrainings = async (ids: string[], newStatus: TrainingStatus) => {
+    if (ids.length === 0) return;
+    const idsSet = new Set(ids);
+    const updated = trainings.map((t) => (idsSet.has(t.id) ? { ...t, status: newStatus } : t));
+    setTrainings(updated);
+    localStorage.setItem('tr_trainings', JSON.stringify(updated));
+
+    try {
+      for (const tId of ids) {
+        const target = updated.find((t) => t.id === tId);
+        if (target) await dbSaveTraining(target);
+      }
+      triggerToast(`Status de ${ids.length} treinamentos alterado com sucesso!`, 'success');
+    } catch (err) {
+      triggerToast('Status alterado localmente. Erro na nuvem.', 'info');
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
     const { type, id } = confirmDelete;
@@ -452,6 +480,21 @@ export default function App() {
       await handleDeleteInstructor(id);
     } else if (type === 'training') {
       await handleDeleteTraining(id);
+    } else if (type === 'bulk_trainings') {
+      const ids = id.split(',');
+      const idsSet = new Set(ids);
+      const updated = trainings.filter((t) => !idsSet.has(t.id));
+      setTrainings(updated);
+      localStorage.setItem('tr_trainings', JSON.stringify(updated));
+
+      try {
+        for (const tId of ids) {
+          await dbDeleteTraining(tId);
+        }
+        triggerToast(`${ids.length} treinamentos excluídos com sucesso.`, 'info');
+      } catch (err) {
+        triggerToast('Sincronizado localmente. Erro ao excluir na nuvem.', 'info');
+      }
     }
   };
 
@@ -674,6 +717,8 @@ export default function App() {
             }}
             onDuplicateTraining={handleDuplicateTraining}
             onDeleteTraining={handleDeleteTrainingTrigger}
+            onBulkDeleteTrainings={handleBulkDeleteTrainings}
+            onBulkUpdateStatusTrainings={handleBulkUpdateStatusTrainings}
           />
         )}
       </main>
