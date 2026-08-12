@@ -98,15 +98,16 @@ function normalizeTrainingRow(row: any): Training {
 export async function dbGetInstructors(fallbackData: Instructor[]): Promise<Instructor[]> {
   const loadFromLocalStorage = (): Instructor[] => {
     const stored = localStorage.getItem('tr_instructors');
-    const localList: Instructor[] = stored ? JSON.parse(stored) : fallbackData;
-    const existingIds = new Set(localList.map((i) => i.id));
-    const missingSeeds = fallbackData.filter((i) => !existingIds.has(i.id));
-    if (missingSeeds.length > 0) {
-      const merged = [...localList, ...missingSeeds];
-      localStorage.setItem('tr_instructors', JSON.stringify(merged));
-      return merged;
+    if (stored !== null) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        // Fallback if corrupted
+      }
     }
-    return localList;
+    localStorage.setItem('tr_instructors', JSON.stringify(fallbackData));
+    localStorage.setItem('tr_initialized', 'true');
+    return fallbackData;
   };
 
   if (!supabase || !isSupabaseOnline) {
@@ -123,26 +124,18 @@ export async function dbGetInstructors(fallbackData: Instructor[]): Promise<Inst
 
     const normalizedData = (data || []).map(normalizeInstructorRow);
 
-    if (normalizedData.length === 0) {
-      console.log('Tabela de instrutores no Supabase está vazia. Sincronizando dados...');
+    const isInitialized = localStorage.getItem('tr_initialized') === 'true';
+    if (normalizedData.length === 0 && !isInitialized) {
+      console.log('Tabela de instrutores no Supabase está vazia. Sincronizando dados iniciais...');
       for (const inst of fallbackData) {
         await dbSaveInstructor(inst);
       }
+      localStorage.setItem('tr_initialized', 'true');
       return fallbackData;
     }
 
-    const existingIds = new Set(normalizedData.map((i) => i.id));
-    const missingSeeds = fallbackData.filter((i) => !existingIds.has(i.id));
-    if (missingSeeds.length > 0) {
-      for (const inst of missingSeeds) {
-        await dbSaveInstructor(inst);
-      }
-      const merged = [...normalizedData, ...missingSeeds];
-      localStorage.setItem('tr_instructors', JSON.stringify(merged));
-      return merged;
-    }
-
     localStorage.setItem('tr_instructors', JSON.stringify(normalizedData));
+    localStorage.setItem('tr_initialized', 'true');
     return normalizedData;
   } catch (err: any) {
     console.warn('Serviço Supabase offline ou indisponível. Utilizando LocalStorage:', err?.message || err);
@@ -192,14 +185,22 @@ export async function dbDeleteInstructor(id: string): Promise<void> {
   if (!supabase || !isSupabaseOnline) return;
 
   try {
-    const { error } = await supabase
+    let { error } = await supabase
       .from('instructors')
       .delete()
       .eq('id', id);
 
+    if (error && !isNaN(Number(id))) {
+      const retry = await supabase
+        .from('instructors')
+        .delete()
+        .eq('id', Number(id));
+      error = retry.error;
+    }
+
     if (error) throw error;
   } catch (err: any) {
-    console.warn('Erro ao excluir instrutor no Supabase, removido do LocalStorage:', err?.message || err);
+    console.warn('Erro ao excluir instrutor no Supabase:', err?.message || err);
   }
 }
 
@@ -207,15 +208,16 @@ export async function dbDeleteInstructor(id: string): Promise<void> {
 export async function dbGetLocations(fallbackData: Location[]): Promise<Location[]> {
   const loadFromLocalStorage = (): Location[] => {
     const stored = localStorage.getItem('tr_locations');
-    const localList: Location[] = stored ? JSON.parse(stored) : fallbackData;
-    const existingIds = new Set(localList.map((l) => l.id));
-    const missingSeeds = fallbackData.filter((l) => !existingIds.has(l.id));
-    if (missingSeeds.length > 0) {
-      const merged = [...localList, ...missingSeeds];
-      localStorage.setItem('tr_locations', JSON.stringify(merged));
-      return merged;
+    if (stored !== null) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        // Fallback if corrupted
+      }
     }
-    return localList;
+    localStorage.setItem('tr_locations', JSON.stringify(fallbackData));
+    localStorage.setItem('tr_initialized', 'true');
+    return fallbackData;
   };
 
   if (!supabase || !isSupabaseOnline) {
@@ -232,26 +234,18 @@ export async function dbGetLocations(fallbackData: Location[]): Promise<Location
 
     const normalizedData = (data || []).map(normalizeLocationRow);
 
-    if (normalizedData.length === 0) {
-      console.log('Tabela de locais no Supabase está vazia. Sincronizando dados...');
+    const isInitialized = localStorage.getItem('tr_initialized') === 'true';
+    if (normalizedData.length === 0 && !isInitialized) {
+      console.log('Tabela de locais no Supabase está vazia. Sincronizando dados iniciais...');
       for (const loc of fallbackData) {
         await dbSaveLocation(loc);
       }
+      localStorage.setItem('tr_initialized', 'true');
       return fallbackData;
     }
 
-    const existingIds = new Set(normalizedData.map((l) => l.id));
-    const missingSeeds = fallbackData.filter((l) => !existingIds.has(l.id));
-    if (missingSeeds.length > 0) {
-      for (const loc of missingSeeds) {
-        await dbSaveLocation(loc);
-      }
-      const merged = [...normalizedData, ...missingSeeds];
-      localStorage.setItem('tr_locations', JSON.stringify(merged));
-      return merged;
-    }
-
     localStorage.setItem('tr_locations', JSON.stringify(normalizedData));
+    localStorage.setItem('tr_initialized', 'true');
     return normalizedData;
   } catch (err: any) {
     console.warn('Serviço Supabase offline ou indisponível. Utilizando LocalStorage:', err?.message || err);
@@ -300,14 +294,22 @@ export async function dbDeleteLocation(id: string): Promise<void> {
   if (!supabase || !isSupabaseOnline) return;
 
   try {
-    const { error } = await supabase
+    let { error } = await supabase
       .from('locations')
       .delete()
       .eq('id', id);
 
+    if (error && !isNaN(Number(id))) {
+      const retry = await supabase
+        .from('locations')
+        .delete()
+        .eq('id', Number(id));
+      error = retry.error;
+    }
+
     if (error) throw error;
   } catch (err: any) {
-    console.warn('Erro ao excluir local no Supabase, removido do LocalStorage:', err?.message || err);
+    console.warn('Erro ao excluir local no Supabase:', err?.message || err);
   }
 }
 
@@ -315,15 +317,17 @@ export async function dbDeleteLocation(id: string): Promise<void> {
 export async function dbGetTrainings(fallbackData: Training[]): Promise<Training[]> {
   const loadFromLocalStorage = (): Training[] => {
     const stored = localStorage.getItem('tr_trainings');
-    const localList: Training[] = stored ? JSON.parse(stored) : fallbackData;
-    const existingIds = new Set(localList.map((t) => t.id));
-    const missingSeeds = fallbackData.filter((t) => !existingIds.has(t.id));
-    if (missingSeeds.length > 0) {
-      const merged = [...localList, ...missingSeeds];
-      localStorage.setItem('tr_trainings', JSON.stringify(merged));
-      return merged;
+    if (stored !== null) {
+      try {
+        const parsed: Training[] = JSON.parse(stored);
+        return parsed.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      } catch {
+        // Fallback if corrupted
+      }
     }
-    return localList;
+    localStorage.setItem('tr_trainings', JSON.stringify(fallbackData));
+    localStorage.setItem('tr_initialized', 'true');
+    return fallbackData;
   };
 
   if (!supabase || !isSupabaseOnline) {
@@ -339,33 +343,21 @@ export async function dbGetTrainings(fallbackData: Training[]): Promise<Training
 
     const normalizedData = (data || []).map(normalizeTrainingRow);
 
-    if (normalizedData.length === 0) {
-      console.log('Tabela de treinamentos no Supabase está vazia. Sincronizando dados...');
+    const isInitialized = localStorage.getItem('tr_initialized') === 'true';
+    if (normalizedData.length === 0 && !isInitialized) {
+      console.log('Tabela de treinamentos no Supabase está vazia. Sincronizando dados iniciais...');
       for (const tr of fallbackData) {
         await dbSaveTraining(tr);
       }
+      localStorage.setItem('tr_initialized', 'true');
       return fallbackData;
-    }
-
-    const existingIds = new Set(normalizedData.map((t) => t.id));
-    const missingSeeds = fallbackData.filter((t) => !existingIds.has(t.id));
-
-    if (missingSeeds.length > 0) {
-      console.log(`Sincronizando ${missingSeeds.length} treinamentos da base de teste com o Supabase...`);
-      for (const tr of missingSeeds) {
-        await dbSaveTraining(tr);
-      }
-      const updatedList = [...normalizedData, ...missingSeeds].sort(
-        (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-      );
-      localStorage.setItem('tr_trainings', JSON.stringify(updatedList));
-      return updatedList;
     }
 
     const sortedData = normalizedData.sort(
       (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
     );
     localStorage.setItem('tr_trainings', JSON.stringify(sortedData));
+    localStorage.setItem('tr_initialized', 'true');
     return sortedData;
   } catch (err: any) {
     console.warn('Serviço Supabase offline ou indisponível. Utilizando LocalStorage:', err?.message || err);
@@ -435,14 +427,22 @@ export async function dbDeleteTraining(id: string): Promise<void> {
   if (!supabase || !isSupabaseOnline) return;
 
   try {
-    const { error } = await supabase
+    let { error } = await supabase
       .from('trainings')
       .delete()
       .eq('id', id);
 
+    if (error && !isNaN(Number(id))) {
+      const retry = await supabase
+        .from('trainings')
+        .delete()
+        .eq('id', Number(id));
+      error = retry.error;
+    }
+
     if (error) throw error;
   } catch (err: any) {
-    console.warn('Erro ao excluir treinamento no Supabase, removido do LocalStorage:', err?.message || err);
+    console.warn('Erro ao excluir treinamento no Supabase:', err?.message || err);
   }
 }
 
@@ -456,6 +456,7 @@ export async function dbSyncAllToSupabase(
   localStorage.setItem('tr_instructors', JSON.stringify(instructors));
   localStorage.setItem('tr_locations', JSON.stringify(locations));
   localStorage.setItem('tr_trainings', JSON.stringify(trainings));
+  localStorage.setItem('tr_initialized', 'true');
 
   if (!supabase) {
     return {
@@ -475,9 +476,41 @@ export async function dbSyncAllToSupabase(
     for (const tr of trainings) {
       await dbSaveTraining(tr);
     }
+
+    // Clean up remote orphan records not present in current frontend state
+    const { data: remoteTrainings } = await supabase.from('trainings').select('id');
+    if (remoteTrainings) {
+      const currentIds = new Set(trainings.map((t) => t.id));
+      for (const r of remoteTrainings) {
+        if (!currentIds.has(String(r.id))) {
+          await supabase.from('trainings').delete().eq('id', r.id);
+        }
+      }
+    }
+
+    const { data: remoteInstructors } = await supabase.from('instructors').select('id');
+    if (remoteInstructors) {
+      const currentIds = new Set(instructors.map((i) => i.id));
+      for (const r of remoteInstructors) {
+        if (!currentIds.has(String(r.id))) {
+          await supabase.from('instructors').delete().eq('id', r.id);
+        }
+      }
+    }
+
+    const { data: remoteLocations } = await supabase.from('locations').select('id');
+    if (remoteLocations) {
+      const currentIds = new Set(locations.map((l) => l.id));
+      for (const r of remoteLocations) {
+        if (!currentIds.has(String(r.id))) {
+          await supabase.from('locations').delete().eq('id', r.id);
+        }
+      }
+    }
+
     isSupabaseOnline = true;
   } catch (err: any) {
-    console.warn('Sincronização parcial com Supabase:', err?.message || err);
+    console.warn('Sincronização com Supabase:', err?.message || err);
   }
 
   return {

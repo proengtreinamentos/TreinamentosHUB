@@ -173,14 +173,6 @@ export default function App() {
           }
         });
 
-        // Ensure all canonical seed instructors exist
-        INITIAL_INSTRUCTORS.forEach((seedInst) => {
-          const normName = seedInst.name.trim().toLowerCase();
-          if (!uniqueNameMap.has(normName)) {
-            uniqueNameMap.set(normName, seedInst);
-          }
-        });
-
         const updatedInstructors = Array.from(uniqueNameMap.values());
 
         setInstructors(updatedInstructors);
@@ -220,39 +212,7 @@ export default function App() {
     try {
       triggerToast('Sincronizando 100% dos dados com a nuvem...', 'info');
 
-      // Helper to merge lists keeping unique items by id
-      const mergeLists = <T extends { id: string }>(current: T[], seeds: T[]): T[] => {
-        const map = new Map<string, T>();
-        seeds.forEach((item) => map.set(item.id, item));
-        current.forEach((item) => map.set(item.id, item));
-        return Array.from(map.values());
-      };
-
-      const legacyNamesToIgnore = new Set([
-        'jaqueline',
-        'thiago dos anjos',
-        'abel benatto',
-        'naiara custódio',
-        'josé ricardo',
-      ]);
-
-      const cleanedInstructors = instructors.filter(
-        (i) => !legacyNamesToIgnore.has(i.name.trim().toLowerCase())
-      );
-
-      const instNameMap = new Map<string, Instructor>();
-      INITIAL_INSTRUCTORS.forEach((item) => instNameMap.set(item.name.trim().toLowerCase(), item));
-      cleanedInstructors.forEach((item) => instNameMap.set(item.name.trim().toLowerCase(), item));
-      const completeInstructors = Array.from(instNameMap.values());
-
-      const completeLocations = mergeLists(locations, INITIAL_LOCATIONS);
-      const completeTrainings = mergeLists(trainings, INITIAL_TRAININGS);
-
-      setInstructors(completeInstructors);
-      setLocations(completeLocations);
-      setTrainings(completeTrainings);
-
-      const res = await dbSyncAllToSupabase(completeInstructors, completeLocations, completeTrainings);
+      const res = await dbSyncAllToSupabase(instructors, locations, trainings);
       if (getStorageMode() === 'supabase') {
         triggerToast(
           `Sincronização 100% concluída no Supabase! (${res.trainingsCount} treinamentos, ${res.instructorsCount} instrutores, ${res.locationsCount} locais)`,
@@ -322,6 +282,7 @@ export default function App() {
       updated = [...instructors, instructorToSave];
     }
     setInstructors(updated);
+    localStorage.setItem('tr_instructors', JSON.stringify(updated));
 
     try {
       await dbSaveInstructor(instructorToSave);
@@ -334,9 +295,11 @@ export default function App() {
   const handleDeleteInstructor = async (id: string) => {
     const updated = instructors.filter((i) => i.id !== id);
     setInstructors(updated);
+    localStorage.setItem('tr_instructors', JSON.stringify(updated));
     
     const updatedTrainings = trainings.map((t) => t.instructorId === id ? { ...t, instructorId: '' } : t);
     setTrainings(updatedTrainings);
+    localStorage.setItem('tr_trainings', JSON.stringify(updatedTrainings));
 
     try {
       // 1. Desvincular treinamentos primeiro no banco para evitar erro de FK (Foreign Key)
@@ -369,6 +332,7 @@ export default function App() {
       updated = [...locations, locationToSave];
     }
     setLocations(updated);
+    localStorage.setItem('tr_locations', JSON.stringify(updated));
 
     try {
       await dbSaveLocation(locationToSave);
@@ -381,9 +345,11 @@ export default function App() {
   const handleDeleteLocation = async (id: string) => {
     const updated = locations.filter((l) => l.id !== id);
     setLocations(updated);
+    localStorage.setItem('tr_locations', JSON.stringify(updated));
 
     const updatedTrainings = trainings.map((t) => t.locationId === id ? { ...t, locationId: '' } : t);
     setTrainings(updatedTrainings);
+    localStorage.setItem('tr_trainings', JSON.stringify(updatedTrainings));
 
     try {
       // 1. Desvincular treinamentos primeiro no banco para evitar erro de FK (Foreign Key)
@@ -416,6 +382,7 @@ export default function App() {
       updated = [...trainings, trainingToSave];
     }
     setTrainings(updated);
+    localStorage.setItem('tr_trainings', JSON.stringify(updated));
 
     try {
       await dbSaveTraining(trainingToSave);
@@ -428,6 +395,7 @@ export default function App() {
   const handleDeleteTraining = async (id: string) => {
     const updated = trainings.filter((t) => t.id !== id);
     setTrainings(updated);
+    localStorage.setItem('tr_trainings', JSON.stringify(updated));
 
     try {
       await dbDeleteTraining(id);
@@ -744,6 +712,7 @@ export default function App() {
           setModalDefaultDate(undefined);
         }}
         onSave={handleSaveTraining}
+        onDelete={(id) => handleDeleteTrainingTrigger(id)}
         training={editingTraining}
         instructors={instructors}
         locations={locations}

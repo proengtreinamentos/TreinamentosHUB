@@ -5,12 +5,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Training, Instructor, Location, TrainingStatus } from '../types';
-import { X, Calendar, Clock, User, MapPin, AlignLeft, Info } from 'lucide-react';
+import { X, Calendar, Clock, User, MapPin, AlignLeft, Info, Trash2 } from 'lucide-react';
 
 interface TrainingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (training: Omit<Training, 'id'> & { id?: string }) => void;
+  onDelete?: (id: string) => void;
   training?: Training | null;
   instructors: Instructor[];
   locations: Location[];
@@ -21,6 +22,7 @@ export default function TrainingModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   training,
   instructors,
   locations,
@@ -344,22 +346,41 @@ export default function TrainingModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
-            <button
-              id="cancel-training-btn"
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              id="save-training-btn"
-              type="submit"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 transition-colors"
-            >
-              Confirmar Treinamento
-            </button>
+          <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
+            {training?.id && onDelete ? (
+              <button
+                id="delete-training-modal-btn"
+                type="button"
+                onClick={() => {
+                  if (training.id && onDelete) {
+                    onDelete(training.id);
+                    onClose();
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
+              >
+                <Trash2 className="h-4 w-4" />
+                Excluir Treinamento
+              </button>
+            ) : <div />}
+
+            <div className="flex items-center gap-3">
+              <button
+                id="cancel-training-btn"
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                id="save-training-btn"
+                type="submit"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 transition-colors cursor-pointer"
+              >
+                Confirmar Treinamento
+              </button>
+            </div>
           </div>
         </form>
       </div>

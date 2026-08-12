@@ -401,7 +401,7 @@ export default function InteractiveCalendarView({
               className="ml-1 flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-black px-3.5 py-2 rounded-lg shadow-md transition-all cursor-pointer uppercase tracking-wider"
             >
               <Plus className="h-4 w-4 stroke-[3]" />
-              + Treinamento
+              Treinamento
             </button>
           </div>
 
@@ -758,7 +758,17 @@ export default function InteractiveCalendarView({
                       const timeStr = formatTimeString(t.startDate) || '08:00';
                       const isCanceled = t.status === 'cancelado';
 
-                      const cardBg = isCanceled ? '#f8fafc' : '#ffffff';
+                      // Helper to convert hex to rgba tint for card background and border
+                      const getLightTint = (hex: string, alpha: number) => {
+                        if (!hex || !hex.startsWith('#') || hex.length !== 7) return `rgba(59, 130, 246, ${alpha})`;
+                        const r = parseInt(hex.slice(1, 3), 16);
+                        const g = parseInt(hex.slice(3, 5), 16);
+                        const b = parseInt(hex.slice(5, 7), 16);
+                        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                      };
+
+                      const cardBg = isCanceled ? '#f8fafc' : getLightTint(instColor, 0.12);
+                      const cardBorderColor = isCanceled ? '#e2e8f0' : getLightTint(instColor, 0.35);
 
                       return (
                         <div
@@ -766,13 +776,14 @@ export default function InteractiveCalendarView({
                           onClick={(e) => handleOpenEditTraining(t, e)}
                           style={{ 
                             backgroundColor: cardBg,
+                            borderColor: cardBorderColor,
                             borderLeftColor: isCanceled ? '#cbd5e1' : instColor 
                           }}
                           className={`rounded-r-lg px-2 py-1.5 text-2xs ${
                             isCanceled 
                               ? 'border-l-[5px] border-dashed border-slate-300' 
                               : 'border-l-[5px]'
-                          } border-y border-r border-slate-200/90 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-1 group/card hover:translate-x-0.5 select-none`}
+                          } border-y border-r shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-1 group/card hover:translate-x-0.5 select-none`}
                           title={`${t.title} - ${inst?.name || ''} (${loc?.name || ''}) - Clique para editar`}
                         >
                           {/* Row 1: Time Pill Badge + Title */}
@@ -790,19 +801,24 @@ export default function InteractiveCalendarView({
                             </span>
                           </div>
 
-                          {/* Row 2: Location */}
-                          <div className="flex items-center gap-1 text-[9.5px] sm:text-[10px] text-slate-500 font-semibold truncate">
-                            <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-slate-400" />
-                            <span className="truncate">{loc?.name || 'Local N/A'}</span>
-                          </div>
+                          {/* Row 2: Location & Instructor in a Single Line */}
+                          <div className="flex items-center gap-1.5 text-[9.5px] sm:text-[10px] font-bold text-slate-800 truncate min-w-0 leading-tight pt-0.5">
+                            {/* Location */}
+                            <span className="flex items-center gap-0.5 truncate flex-shrink min-w-0 text-slate-600">
+                              <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-slate-500" />
+                              <span className="truncate">{loc?.name || 'Local N/A'}</span>
+                            </span>
 
-                          {/* Row 3: Instructor Name */}
-                          <div className="flex items-center gap-1 text-[9.5px] sm:text-[10px] font-extrabold truncate text-slate-700">
-                            <div 
-                              className="h-2 w-2 rounded-full flex-shrink-0" 
-                              style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
-                            />
-                            <span className="truncate">{inst?.name || 'Instrutor N/A'}</span>
+                            <span className="text-slate-400 font-semibold flex-shrink-0">•</span>
+
+                            {/* Instructor */}
+                            <span className="flex items-center gap-1 truncate flex-shrink min-w-0 font-extrabold text-slate-900">
+                              <div 
+                                className="h-2 w-2 rounded-full flex-shrink-0 shadow-2xs" 
+                                style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
+                              />
+                              <span className="truncate">{inst?.name || 'Instrutor N/A'}</span>
+                            </span>
                           </div>
                         </div>
                       );
