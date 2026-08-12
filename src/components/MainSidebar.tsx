@@ -1,18 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
-  Calendar as CalendarIcon, 
   Users, 
   MapPin, 
   ListTodo, 
   Sparkles, 
-  Database, 
   X, 
   ChevronRight,
   ShieldCheck,
-  Building2
+  RefreshCw
 } from 'lucide-react';
 
-export type TabType = 'calendario' | 'interativo' | 'treinamentos' | 'instrutores' | 'locais';
+export type TabType = 'interativo' | 'treinamentos' | 'instrutores' | 'locais';
 
 interface MainSidebarProps {
   activeTab: TabType;
@@ -20,6 +18,7 @@ interface MainSidebarProps {
   isSupabaseConfigured: boolean;
   isMobileOpen: boolean;
   setIsMobileOpen: (open: boolean) => void;
+  onSyncRequested?: () => Promise<void>;
 }
 
 export default function MainSidebar({
@@ -28,19 +27,25 @@ export default function MainSidebar({
   isSupabaseConfigured,
   isMobileOpen,
   setIsMobileOpen,
+  onSyncRequested,
 }: MainSidebarProps) {
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleManualSync = async () => {
+    if (!onSyncRequested) return;
+    setIsSyncing(true);
+    try {
+      await onSyncRequested();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const navItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }>; badge?: string }[] = [
-    {
-      id: 'calendario',
-      label: 'Agenda (Calendário)',
-      icon: CalendarIcon,
-    },
     {
       id: 'interativo',
       label: 'Calendário Interativo',
       icon: Sparkles,
-      badge: 'PRO',
     },
     {
       id: 'treinamentos',
@@ -81,33 +86,26 @@ export default function MainSidebar({
         }`}
       >
         {/* Brand Header */}
-        <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Proeng Typography Logo */}
-            <div className="flex items-center gap-1 bg-[#07193d] px-3 py-1.5 rounded-xl border border-slate-700/80 shadow-md">
-              <span className="text-xl font-black italic tracking-tighter text-white">
-                PRO
-              </span>
-              <span className="text-xl font-black italic tracking-tighter text-red-600 relative inline-block">
-                ENG
-                <span className="absolute -top-1 -right-2 h-2 w-2 rounded-full bg-red-500 animate-ping" />
+        <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="flex flex-col gap-1 min-w-0">
+            {/* Clean PROENG Text Title */}
+            <div className="flex items-center">
+              <span className="text-2xl sm:text-3xl font-black italic tracking-tighter text-white drop-shadow-sm">
+                PRO<span className="text-red-600">ENG</span>
               </span>
             </div>
 
             <div>
-              <h2 className="text-xs font-black uppercase tracking-wider text-slate-200 leading-tight">
-                Portal Proeng
+              <h2 className="text-[11px] font-black uppercase tracking-wider text-slate-300 leading-snug">
+                GESTÃO DE TREINAMENTOS
               </h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Treinamentos
-              </p>
             </div>
           </div>
 
           {/* Mobile Close Button */}
           <button
             onClick={() => setIsMobileOpen(false)}
-            className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0"
           >
             <X className="h-5 w-5" />
           </button>
@@ -169,8 +167,8 @@ export default function MainSidebar({
           })}
         </nav>
 
-        {/* Footer Database Status */}
-        <div className="p-4 border-t border-slate-800/80 bg-[#000a1f]/80 flex flex-col gap-2">
+        {/* Footer Database Status & Sync */}
+        <div className="p-4 border-t border-slate-800/80 bg-[#000a1f]/80 flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               Status da Conexão
@@ -187,6 +185,19 @@ export default function MainSidebar({
               </span>
             )}
           </div>
+
+          {/* Sync Button */}
+          {onSyncRequested && (
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-800/80 hover:bg-blue-600 active:bg-blue-700 text-slate-200 hover:text-white rounded-xl text-xs font-black transition-all cursor-pointer border border-slate-700 hover:border-blue-500 shadow-sm disabled:opacity-50"
+              title="Sincronizar todos os treinamentos, instrutores e locais entre teste e produção no Supabase"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-blue-400' : 'text-slate-400'}`} />
+              <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar com Nuvem'}</span>
+            </button>
+          )}
 
           <div className="flex items-center gap-2 pt-2 border-t border-slate-800/50 text-[10px] font-medium text-slate-400">
             <ShieldCheck className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />

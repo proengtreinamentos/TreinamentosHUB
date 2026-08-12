@@ -61,6 +61,15 @@ export async function dbGetInstructors(fallbackData: Instructor[]): Promise<Inst
       .order('name', { ascending: true });
 
     if (error) throw error;
+
+    if (!data || data.length === 0) {
+      console.log('Tabela de instrutores no Supabase está vazia. Sincronizando dados de teste...');
+      for (const inst of fallbackData) {
+        await dbSaveInstructor(inst);
+      }
+      return fallbackData;
+    }
+
     return data as Instructor[];
   } catch (err) {
     console.error('Erro ao buscar instrutores no Supabase, usando LocalStorage:', err);
@@ -138,6 +147,15 @@ export async function dbGetLocations(fallbackData: Location[]): Promise<Location
       .order('name', { ascending: true });
 
     if (error) throw error;
+
+    if (!data || data.length === 0) {
+      console.log('Tabela de locais no Supabase está vazia. Sincronizando dados de teste...');
+      for (const loc of fallbackData) {
+        await dbSaveLocation(loc);
+      }
+      return fallbackData;
+    }
+
     return data as Location[];
   } catch (err) {
     console.error('Erro ao buscar locais no Supabase, usando LocalStorage:', err);
@@ -213,8 +231,30 @@ export async function dbGetTrainings(fallbackData: Training[]): Promise<Training
       .order('startDate', { ascending: true });
 
     if (error) throw error;
-    
-    // Map column names if they are different, but we'll create columns matching React object properties
+
+    if (!data || data.length === 0) {
+      console.log('Tabela de treinamentos no Supabase está vazia. Sincronizando dados de teste...');
+      for (const tr of fallbackData) {
+        await dbSaveTraining(tr);
+      }
+      return fallbackData;
+    }
+
+    // Check if fallbackData has seed trainings that are missing in Supabase, and merge & sync them automatically
+    const existingIds = new Set((data as Training[]).map((t) => t.id));
+    const missingSeeds = fallbackData.filter((t) => !existingIds.has(t.id));
+
+    if (missingSeeds.length > 0) {
+      console.log(`Sincronizando ${missingSeeds.length} treinamentos da base de teste com o Supabase...`);
+      for (const tr of missingSeeds) {
+        await dbSaveTraining(tr);
+      }
+      const updatedList = [...(data as Training[]), ...missingSeeds].sort(
+        (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+      );
+      return updatedList;
+    }
+
     return data as Training[];
   } catch (err) {
     console.error('Erro ao buscar treinamentos no Supabase, usando LocalStorage:', err);
@@ -248,6 +288,7 @@ export async function dbSaveTraining(training: Training): Promise<void> {
         endDate: training.endDate,
         status: training.status,
         description: training.description || null,
+        customColor: training.customColor || null,
       });
 
     if (error) throw error;
@@ -277,4 +318,41 @@ export async function dbDeleteTraining(id: string): Promise<void> {
     console.error('Erro ao excluir treinamento no Supabase:', err);
     throw err;
   }
+}
+
+// 4. FORCED BIDIRECTIONAL SYNC FUNCTION
+export async function dbSyncAllToSupabase(
+  instructors: Instructor[],
+  locations: Location[],
+  trainings: Training[]
+): Promise<{ instructorsCount: number; locationsCount: number; trainingsCount: number }> {
+  // 1. Sync localstorage
+  localStorage.setItem('tr_instructors', JSON.stringify(instructors));
+  localStorage.setItem('tr_locations', JSON.stringify(locations));
+  localStorage.setItem('tr_trainings', JSON.stringify(trainings));
+
+  if (!supabase) {
+    return {
+      instructorsCount: instructors.length,
+      locationsCount: locations.length,
+      trainingsCount: trainings.length,
+    };
+  }
+
+  // 2. Push all records to Supabase tables
+  for (const inst of instructors) {
+    await dbSaveInstructor(inst);
+  }
+  for (const loc of locations) {
+    await dbSaveLocation(loc);
+  }
+  for (const tr of trainings) {
+    await dbSaveTraining(tr);
+  }
+
+  return {
+    instructorsCount: instructors.length,
+    locationsCount: locations.length,
+    trainingsCount: trainings.length,
+  };
 }

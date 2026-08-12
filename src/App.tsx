@@ -22,16 +22,12 @@ import {
   dbDeleteLocation,
   dbGetTrainings,
   dbSaveTraining,
-  dbDeleteTraining
+  dbDeleteTraining,
+  dbSyncAllToSupabase
 } from './lib/supabase';
 
 // Components
-import Sidebar from './components/Sidebar';
 import MainSidebar, { TabType } from './components/MainSidebar';
-import CalendarHeader, { CalendarViewType } from './components/CalendarHeader';
-import MonthView from './components/MonthView';
-import WeekView from './components/WeekView';
-import DayView from './components/DayView';
 import InteractiveCalendarView from './components/InteractiveCalendarView';
 
 // Modals
@@ -67,7 +63,7 @@ interface Toast {
 
 export default function App() {
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<TabType>('calendario');
+  const [activeTab, setActiveTab] = useState<TabType>('interativo');
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   
   // Sidebar visibility toggle
@@ -102,9 +98,9 @@ export default function App() {
     }
   };
   
-  // Calendar-specific active date & view (Starts default June 25, 2026 as in metadata)
-  const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 5, 25)); // month 5 is June
-  const [calendarView, setCalendarView] = useState<CalendarViewType>('month');
+  // Calendar-specific active date (Defaults to current date/month)
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('month');
 
   // Persistence States
   const [instructors, setInstructors] = useState<Instructor[]>([]);
@@ -195,6 +191,28 @@ export default function App() {
     }, 4500);
   };
 
+  // Full database sync function
+  const handleSyncAll = async () => {
+    try {
+      triggerToast('Sincronizando 100% dos dados com a nuvem...', 'info');
+      const res = await dbSyncAllToSupabase(instructors, locations, trainings);
+      if (isSupabaseConfigured) {
+        triggerToast(
+          `Sincronização 100% concluída no Supabase! (${res.trainingsCount} treinamentos, ${res.instructorsCount} instrutores, ${res.locationsCount} locais)`,
+          'success'
+        );
+      } else {
+        triggerToast(
+          `Sincronização local efetuada! (${res.trainingsCount} treinamentos mantidos localmente)`,
+          'info'
+        );
+      }
+    } catch (err) {
+      console.error('Erro na sincronização:', err);
+      triggerToast('Erro durante a sincronização com o banco.', 'error');
+    }
+  };
+
   // Reset demo data
   const resetToSeeds = async () => {
     if (confirm('Deseja redefinir todo o sistema para os dados iniciais do exemplo? Seus cadastros atuais serão perdidos.')) {
@@ -205,7 +223,7 @@ export default function App() {
       localStorage.setItem('tr_instructors', JSON.stringify(INITIAL_INSTRUCTORS));
       localStorage.setItem('tr_locations', JSON.stringify(INITIAL_LOCATIONS));
       localStorage.setItem('tr_trainings', JSON.stringify(INITIAL_TRAININGS));
-      setCurrentDate(new Date(2026, 5, 25));
+      setCurrentDate(new Date());
 
       if (isSupabaseConfigured) {
         try {
@@ -463,7 +481,7 @@ export default function App() {
   // ----------------------------------------------------
   const handleNavigate = (direction: 'prev' | 'next' | 'today') => {
     if (direction === 'today') {
-      setCurrentDate(new Date(2026, 5, 25)); // Set back to June 25, 2026 (our demo pivot date)
+      setCurrentDate(new Date());
       return;
     }
 
@@ -534,6 +552,7 @@ export default function App() {
         isSupabaseConfigured={isSupabaseConfigured}
         isMobileOpen={isMobileNavOpen}
         setIsMobileOpen={setIsMobileNavOpen}
+        onSyncRequested={handleSyncAll}
       />
 
       {/* Main Right Content Area */}
@@ -550,19 +569,15 @@ export default function App() {
               <Menu className="h-5 w-5" />
             </button>
             
-            <div className="flex items-center gap-1.5 bg-[#07193d] px-2.5 py-1 rounded-lg border border-slate-700">
-              <span className="text-base font-black italic tracking-tighter text-white">
-                PRO
-              </span>
-              <span className="text-base font-black italic tracking-tighter text-red-600">
-                ENG
+            <div className="flex items-center gap-1">
+              <span className="text-xl font-black italic tracking-tighter text-white">
+                PRO<span className="text-red-600">ENG</span>
               </span>
             </div>
           </div>
 
           <div className="text-right">
             <p className="text-xs font-black uppercase text-red-500 tracking-wider">
-              {activeTab === 'calendario' && 'Agenda (Calendário)'}
               {activeTab === 'interativo' && 'Calendário Interativo'}
               {activeTab === 'treinamentos' && 'Lista de Treinamentos'}
               {activeTab === 'instrutores' && 'Instrutores'}
@@ -573,126 +588,18 @@ export default function App() {
 
         {/* 🚀 Tab View Routing */}
         <main className="flex-1 flex flex-col overflow-y-auto">
-          {activeTab === 'calendario' && (
-            <div className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 max-w-[1600px] w-full mx-auto">
-            {/* Sidebar workspace */}
-            {isSidebarOpen && (
-              <Sidebar
-                selectedDate={currentDate}
-                onDateSelect={setCurrentDate}
-                onAddEventClick={() => {
-                  setEditingTraining(null);
-                  setModalDefaultDate(formatDateString(currentDate));
-                  setActiveModal('training');
-                }}
-                instructors={instructors}
-                locations={locations}
-                selectedInstructorIds={selectedInstructorIds}
-                onToggleInstructor={handleToggleInstructor}
-                onClearInstructorFilters={() => setSelectedInstructorIds([])}
-                selectedLocationIds={selectedLocationIds}
-                onToggleLocation={handleToggleLocation}
-                onClearLocationFilters={() => setSelectedLocationIds([])}
-              />
-            )}
-
-            {/* Main Calendar Body Workspace */}
-            <div 
-              ref={calendarRef}
-              id="calendar-main-container"
-              className={`flex-1 flex flex-col bg-white overflow-hidden transition-all ${
-                isFullscreen 
-                  ? 'p-4 bg-white rounded-none border-none w-full h-full' 
-                  : 'rounded-xl border border-slate-200 shadow-sm'
-              }`}
-            >
-              <CalendarHeader
-                currentDate={currentDate}
-                onNavigate={handleNavigate}
-                view={calendarView}
-                onViewChange={setCalendarView}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                isSidebarOpen={isSidebarOpen}
-                onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                isFullscreen={isFullscreen}
-                onToggleFullscreen={handleToggleFullscreen}
-              />
-
-              {/* Dynamic View rendering */}
-              <div className="flex-1 flex flex-col">
-                {calendarView === 'month' && (
-                  <MonthView
-                    currentDate={currentDate}
-                    trainings={filteredEventsForCalendar}
-                    instructors={instructors}
-                    locations={locations}
-                    onEventClick={(t) => {
-                      setEditingTraining(t);
-                      setActiveModal('training');
-                    }}
-                    onEventDrop={handleEventReschedule}
-                    onCellClick={(dateStr) => {
-                      setEditingTraining(null);
-                      setModalDefaultDate(dateStr);
-                      setActiveModal('training');
-                    }}
-                  />
-                )}
-
-                {calendarView === 'week' && (
-                  <WeekView
-                    currentDate={currentDate}
-                    trainings={filteredEventsForCalendar}
-                    instructors={instructors}
-                    locations={locations}
-                    onEventClick={(t) => {
-                      setEditingTraining(t);
-                      setActiveModal('training');
-                    }}
-                    onEventDrop={handleEventReschedule}
-                    onCellClick={(dateStr) => {
-                      setEditingTraining(null);
-                      setModalDefaultDate(dateStr);
-                      setActiveModal('training');
-                    }}
-                  />
-                )}
-
-                {calendarView === 'day' && (
-                  <DayView
-                    currentDate={currentDate}
-                    trainings={filteredEventsForCalendar}
-                    instructors={instructors}
-                    locations={locations}
-                    onEventClick={(t) => {
-                      setEditingTraining(t);
-                      setActiveModal('training');
-                    }}
-                    onEventDrop={handleEventReschedule}
-                    onCellClick={(dateStr) => {
-                      setEditingTraining(null);
-                      setModalDefaultDate(dateStr);
-                      setActiveModal('training');
-                    }}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'interativo' && (
-          <InteractiveCalendarView
-            currentDate={currentDate}
-            onNavigate={handleNavigate}
-            trainings={trainings}
-            instructors={instructors}
-            locations={locations}
-            onSaveTraining={handleSaveTraining}
-            onDeleteTraining={handleDeleteTraining}
-          />
-        )}
+          {activeTab === 'interativo' && (
+            <InteractiveCalendarView
+              currentDate={currentDate}
+              onNavigate={handleNavigate}
+              trainings={trainings}
+              instructors={instructors}
+              locations={locations}
+              onSaveTraining={handleSaveTraining}
+              onDeleteTraining={handleDeleteTraining}
+              onSyncRequested={handleSyncAll}
+            />
+          )}
 
         {activeTab === 'instrutores' && (
           <InstructorsManagement

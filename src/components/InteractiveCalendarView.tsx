@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Training, Instructor, Location } from '../types';
 import { generateMonthGrid, MONTHS_PT, formatDateString, formatTimeString } from '../utils/dateUtils';
 import { 
@@ -18,7 +18,10 @@ import {
   ShieldCheck,
   TrendingUp,
   Clock,
-  MapPin
+  MapPin,
+  RefreshCw,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 interface InteractiveCalendarViewProps {
@@ -30,6 +33,7 @@ interface InteractiveCalendarViewProps {
   onSaveTraining: (training: Omit<Training, 'id'> & { id?: string }) => void;
   onDeleteTraining: (id: string) => void;
   onSaveInstructor?: (instructor: Omit<Instructor, 'id'> & { id?: string }) => void;
+  onSyncRequested?: () => Promise<void>;
 }
 
 // Preset color swatches matching the exact image palette
@@ -52,7 +56,44 @@ export default function InteractiveCalendarView({
   locations,
   onSaveTraining,
   onDeleteTraining,
+  onSyncRequested,
 }: InteractiveCalendarViewProps) {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const calendarContainerRef = useRef<HTMLDivElement>(null);
+
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      setIsFullscreen(true);
+      if (calendarContainerRef.current && calendarContainerRef.current.requestFullscreen) {
+        calendarContainerRef.current.requestFullscreen().catch(() => {});
+      }
+    } else {
+      setIsFullscreen(false);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFSChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFSChange);
+    return () => document.removeEventListener('fullscreenchange', handleFSChange);
+  }, []);
+
+  const handleManualSync = async () => {
+    if (!onSyncRequested) return;
+    setIsSyncing(true);
+    try {
+      await onSyncRequested();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -183,7 +224,14 @@ export default function InteractiveCalendarView({
   const monthNameUpper = MONTHS_PT[month].toUpperCase();
 
   return (
-    <div className="flex-1 flex flex-col bg-[#030e21] text-slate-100 rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-800/90 relative overflow-hidden font-sans">
+    <div 
+      ref={calendarContainerRef}
+      className={`flex-1 flex flex-col bg-[#030e21] text-slate-100 relative font-sans transition-all duration-150 ${
+        isFullscreen 
+          ? 'fixed inset-0 z-[100] w-screen h-screen rounded-none p-4 sm:p-6 overflow-y-auto' 
+          : 'rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-800/90 overflow-hidden'
+      }`}
+    >
       
       {/* Background Top & Bottom Red Diagonal Geometry Accents */}
       <div 
@@ -196,26 +244,16 @@ export default function InteractiveCalendarView({
       />
 
       {/* ============================================================ */}
-      {/* HEADER BANNER: PROENG LOGO + AGENDA MONTH TITLE + CONTROLS    */}
+      {/* HEADER BANNER: PROENG TEXT + AGENDA MONTH TITLE + CONTROLS    */}
       {/* ============================================================ */}
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-800/80 mb-5">
         
-        {/* Left: Brand Logo & Title Block */}
-        <div className="flex items-center gap-6">
-          {/* Brand Typography Logo */}
-          <div className="flex items-center gap-1">
+        {/* Left: Brand Text & Title Block */}
+        <div className="flex items-center gap-5">
+          {/* Clean PROENG Text */}
+          <div className="flex items-center">
             <span className="text-3xl sm:text-4xl font-black italic tracking-tighter text-white drop-shadow-md">
-              PRO
-            </span>
-            <span className="text-3xl sm:text-4xl font-black italic tracking-tighter text-red-600 relative inline-block drop-shadow-md">
-              ENG
-              {/* Lightning accent SVG overlay */}
-              <svg 
-                className="absolute -top-2 left-3 w-5 h-7 text-red-500 fill-current animate-pulse" 
-                viewBox="0 0 24 24"
-              >
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
+              PRO<span className="text-red-600">ENG</span>
             </span>
           </div>
 
@@ -223,8 +261,8 @@ export default function InteractiveCalendarView({
 
           {/* Title Header */}
           <div className="flex flex-col">
-            <p className="text-xs font-black tracking-widest text-slate-300 uppercase">
-              Agenda de Treinamentos
+            <p className="text-[11px] font-black tracking-widest text-slate-300 uppercase">
+              GESTÃO DE TREINAMENTOS PROENG
             </p>
             <div className="flex items-baseline gap-2">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-red-600 uppercase drop-shadow-sm">
@@ -248,35 +286,74 @@ export default function InteractiveCalendarView({
           </div>
         </div>
 
-        {/* Right: Quick Controls for Interactive Navigation */}
-        <div className="flex items-center gap-2 bg-[#0a1c38] p-1.5 rounded-xl border border-slate-700/80">
-          <button
-            onClick={() => onNavigate('prev')}
-            className="p-2 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
-            title="Mês Anterior"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => onNavigate('today')}
-            className="px-3 py-1.5 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
-          >
-            Hoje
-          </button>
-          <button
-            onClick={() => onNavigate('next')}
-            className="p-2 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
-            title="Próximo Mês"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+        {/* Right: Quick Controls & Standalone Fullscreen Button */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Navigation & Sync Actions Bar */}
+          <div className="flex items-center gap-2 bg-[#0a1c38] p-1.5 rounded-xl border border-slate-700/80">
+            <button
+              onClick={() => onNavigate('prev')}
+              className="p-2 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
+              title="Mês Anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onNavigate('today')}
+              className="px-3 py-1.5 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              Hoje
+            </button>
+            <button
+              onClick={() => onNavigate('next')}
+              className="p-2 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
+              title="Próximo Mês"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
 
+            {/* Sync Button */}
+            {onSyncRequested && (
+              <button
+                onClick={handleManualSync}
+                disabled={isSyncing}
+                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-black px-3 py-2 rounded-lg shadow-md transition-all cursor-pointer uppercase tracking-wider disabled:opacity-50"
+                title="Sincronizar dados entre ambiente de teste e produção no Supabase"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => handleOpenNewForDate(formatDateString(new Date()))}
+              className="ml-1 flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-black px-3.5 py-2 rounded-lg shadow-md transition-all cursor-pointer uppercase tracking-wider"
+            >
+              <Plus className="h-4 w-4 stroke-[3]" />
+              + Treinamento
+            </button>
+          </div>
+
+          {/* Standalone Fullscreen Toggle Button (Separated on the right) */}
           <button
-            onClick={() => handleOpenNewForDate(formatDateString(new Date()))}
-            className="ml-2 flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-black px-3.5 py-2 rounded-lg shadow-md transition-all cursor-pointer uppercase tracking-wider"
+            onClick={toggleFullscreen}
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg transition-all cursor-pointer border ${
+              isFullscreen 
+                ? 'bg-amber-600 hover:bg-amber-500 text-white border-amber-400/50 ring-2 ring-amber-400/30' 
+                : 'bg-[#0a1c38] hover:bg-blue-600 text-slate-100 border-slate-700/80 hover:border-blue-500'
+            }`}
+            title={isFullscreen ? 'Sair da Tela Cheia (Esc)' : 'Visualizar em Tela Cheia'}
           >
-            <Plus className="h-4 w-4 stroke-[3]" />
-            + Treinamento
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="h-4 w-4 text-amber-200" />
+                <span>Sair Tela Cheia</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="h-4 w-4 text-blue-400" />
+                <span>Tela Cheia</span>
+              </>
+            )}
           </button>
         </div>
 
