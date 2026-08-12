@@ -37,15 +37,16 @@ const supabaseUrl = getCleanSupabaseUrl(rawSupabaseUrl);
 // Check if Supabase credentials are provided and non-empty
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey && String(supabaseAnonKey).trim().length > 10);
 
-// Lazy/Conditional initialization of the Supabase client
+// Conditional initialization of the Supabase client
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl!, supabaseAnonKey)
+  ? createClient(supabaseUrl!, supabaseAnonKey, {
+      auth: { persistSession: false },
+    })
   : null;
 
 // Track active online state for Supabase connection
 let isSupabaseOnline = isSupabaseConfigured;
 
-// Helper to check if we are using the live Supabase database or LocalStorage fallback
 export function getStorageMode(): 'supabase' | 'local' {
   return isSupabaseConfigured && isSupabaseOnline ? 'supabase' : 'local';
 }
@@ -90,28 +91,30 @@ function normalizeTrainingRow(row: any): Training {
 
 /**
  * ----------------------------------------------------
- * DATABASE OPERATIONS WITH AUTO-FALLBACK TO LOCAL STORAGE
+ * DATABASE OPERATIONS WITH BIDIRECTIONAL AUTO-MERGE & SYNC
  * ----------------------------------------------------
  */
 
 // 1. INSTRUTORES
 export async function dbGetInstructors(fallbackData: Instructor[]): Promise<Instructor[]> {
-  const loadFromLocalStorage = (): Instructor[] => {
+  const getLocalInstructors = (): Instructor[] => {
     const stored = localStorage.getItem('tr_instructors');
     if (stored !== null) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch {
-        // Fallback if corrupted
+        // Fallback
       }
     }
     localStorage.setItem('tr_instructors', JSON.stringify(fallbackData));
-    localStorage.setItem('tr_initialized', 'true');
     return fallbackData;
   };
 
-  if (!supabase || !isSupabaseOnline) {
-    return loadFromLocalStorage();
+  const localList = getLocalInstructors();
+
+  if (!supabase) {
+    return localList;
   }
 
   try {
@@ -122,29 +125,42 @@ export async function dbGetInstructors(fallbackData: Instructor[]): Promise<Inst
 
     if (error) throw error;
 
-    const normalizedData = (data || []).map(normalizeInstructorRow);
+    isSupabaseOnline = true;
+    const remoteList = (data || []).map(normalizeInstructorRow);
 
-    const isInitialized = localStorage.getItem('tr_initialized') === 'true';
-    if (normalizedData.length === 0 && !isInitialized) {
-      console.log('Tabela de instrutores no Supabase está vazia. Sincronizando dados iniciais...');
-      for (const inst of fallbackData) {
+    // Merge: combine remote list with any local instructor created offline/locally
+    const mergedMap = new Map<string, Instructor>();
+    // First insert all remote items
+    remoteList.forEach((inst) => mergedMap.set(inst.id, inst));
+
+    // Then check if local has items missing in remote
+    const missingInRemote: Instructor[] = [];
+    localList.forEach((inst) => {
+      if (!mergedMap.has(inst.id)) {
+        mergedMap.set(inst.id, inst);
+        missingInRemote.push(inst);
+      }
+    });
+
+    const mergedList = Array.from(mergedMap.values());
+    localStorage.setItem('tr_instructors', JSON.stringify(mergedList));
+
+    // Push local missing items to Supabase asynchronously
+    if (missingInRemote.length > 0) {
+      for (const inst of missingInRemote) {
         await dbSaveInstructor(inst);
       }
-      localStorage.setItem('tr_initialized', 'true');
-      return fallbackData;
     }
 
-    localStorage.setItem('tr_instructors', JSON.stringify(normalizedData));
-    localStorage.setItem('tr_initialized', 'true');
-    return normalizedData;
+    return mergedList;
   } catch (err: any) {
-    console.warn('Serviço Supabase offline ou indisponível. Utilizando LocalStorage:', err?.message || err);
-    isSupabaseOnline = false;
-    return loadFromLocalStorage();
+    console.warn('Serviço Supabase indisponível para instrutores. Utilizando LocalStorage:', err?.message || err);
+    return localList;
   }
 }
 
-export async function dbSaveInstructor(instructor: Instructor): Promise<void> {
+export async function dbSaveInstructor(instructor: Instructor): Promise<boolean> {
+  // Update local storage immediately
   const stored = localStorage.getItem('tr_instructors');
   let localList: Instructor[] = stored ? JSON.parse(stored) : [];
   const exists = localList.some((i) => i.id === instructor.id);
@@ -155,23 +171,42 @@ export async function dbSaveInstructor(instructor: Instructor): Promise<void> {
   }
   localStorage.setItem('tr_instructors', JSON.stringify(localList));
 
-  if (!supabase || !isSupabaseOnline) return;
+  if (!supabase) return false;
 
   try {
-    const { error } = await supabase
-      .from('instructors')
-      .upsert({
-        id: instructor.id,
+    // Try upsert standard
+    let { error } = await supabase.from('instructors').upsert({
+      id: instructor.id,
+      name: instructor.name,
+      color: instructor.color,
+      specialty: instructor.specialty,
+      email: instructor.email || null,
+      phone: instructor.phone || null,
+    });
+
+    // If id numeric issue retry with numeric id if possible
+    if (error && !isNaN(Number(instructor.id))) {
+      const retry = await supabase.from('instructors').upsert({
+        id: Number(instructor.id),
         name: instructor.name,
         color: instructor.color,
         specialty: instructor.specialty,
         email: instructor.email || null,
         phone: instructor.phone || null,
       });
+      error = retry.error;
+    }
 
-    if (error) throw error;
+    if (error) {
+      console.warn('Erro ao salvar instrutor no Supabase:', error.message);
+      return false;
+    }
+
+    isSupabaseOnline = true;
+    return true;
   } catch (err: any) {
-    console.warn('Erro ao salvar instrutor no Supabase, mantido em LocalStorage:', err?.message || err);
+    console.warn('Exceção ao salvar instrutor no Supabase:', err?.message || err);
+    return false;
   }
 }
 
@@ -182,23 +217,18 @@ export async function dbDeleteInstructor(id: string): Promise<void> {
     localStorage.setItem('tr_instructors', JSON.stringify(localList.filter((i) => i.id !== id)));
   }
 
-  if (!supabase || !isSupabaseOnline) return;
+  if (!supabase) return;
 
   try {
-    let { error } = await supabase
-      .from('instructors')
-      .delete()
-      .eq('id', id);
+    let { error } = await supabase.from('instructors').delete().eq('id', id);
 
     if (error && !isNaN(Number(id))) {
-      const retry = await supabase
-        .from('instructors')
-        .delete()
-        .eq('id', Number(id));
+      const retry = await supabase.from('instructors').delete().eq('id', Number(id));
       error = retry.error;
     }
 
     if (error) throw error;
+    isSupabaseOnline = true;
   } catch (err: any) {
     console.warn('Erro ao excluir instrutor no Supabase:', err?.message || err);
   }
@@ -206,22 +236,24 @@ export async function dbDeleteInstructor(id: string): Promise<void> {
 
 // 2. LOCAIS
 export async function dbGetLocations(fallbackData: Location[]): Promise<Location[]> {
-  const loadFromLocalStorage = (): Location[] => {
+  const getLocalLocations = (): Location[] => {
     const stored = localStorage.getItem('tr_locations');
     if (stored !== null) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch {
-        // Fallback if corrupted
+        // Fallback
       }
     }
     localStorage.setItem('tr_locations', JSON.stringify(fallbackData));
-    localStorage.setItem('tr_initialized', 'true');
     return fallbackData;
   };
 
-  if (!supabase || !isSupabaseOnline) {
-    return loadFromLocalStorage();
+  const localList = getLocalLocations();
+
+  if (!supabase) {
+    return localList;
   }
 
   try {
@@ -232,29 +264,37 @@ export async function dbGetLocations(fallbackData: Location[]): Promise<Location
 
     if (error) throw error;
 
-    const normalizedData = (data || []).map(normalizeLocationRow);
+    isSupabaseOnline = true;
+    const remoteList = (data || []).map(normalizeLocationRow);
 
-    const isInitialized = localStorage.getItem('tr_initialized') === 'true';
-    if (normalizedData.length === 0 && !isInitialized) {
-      console.log('Tabela de locais no Supabase está vazia. Sincronizando dados iniciais...');
-      for (const loc of fallbackData) {
+    const mergedMap = new Map<string, Location>();
+    remoteList.forEach((loc) => mergedMap.set(loc.id, loc));
+
+    const missingInRemote: Location[] = [];
+    localList.forEach((loc) => {
+      if (!mergedMap.has(loc.id)) {
+        mergedMap.set(loc.id, loc);
+        missingInRemote.push(loc);
+      }
+    });
+
+    const mergedList = Array.from(mergedMap.values());
+    localStorage.setItem('tr_locations', JSON.stringify(mergedList));
+
+    if (missingInRemote.length > 0) {
+      for (const loc of missingInRemote) {
         await dbSaveLocation(loc);
       }
-      localStorage.setItem('tr_initialized', 'true');
-      return fallbackData;
     }
 
-    localStorage.setItem('tr_locations', JSON.stringify(normalizedData));
-    localStorage.setItem('tr_initialized', 'true');
-    return normalizedData;
+    return mergedList;
   } catch (err: any) {
-    console.warn('Serviço Supabase offline ou indisponível. Utilizando LocalStorage:', err?.message || err);
-    isSupabaseOnline = false;
-    return loadFromLocalStorage();
+    console.warn('Serviço Supabase indisponível para locais. Utilizando LocalStorage:', err?.message || err);
+    return localList;
   }
 }
 
-export async function dbSaveLocation(location: Location): Promise<void> {
+export async function dbSaveLocation(location: Location): Promise<boolean> {
   const stored = localStorage.getItem('tr_locations');
   let localList: Location[] = stored ? JSON.parse(stored) : [];
   const exists = localList.some((l) => l.id === location.id);
@@ -265,22 +305,38 @@ export async function dbSaveLocation(location: Location): Promise<void> {
   }
   localStorage.setItem('tr_locations', JSON.stringify(localList));
 
-  if (!supabase || !isSupabaseOnline) return;
+  if (!supabase) return false;
 
   try {
-    const { error } = await supabase
-      .from('locations')
-      .upsert({
-        id: location.id,
+    let { error } = await supabase.from('locations').upsert({
+      id: location.id,
+      name: location.name,
+      type: location.type,
+      capacity: location.capacity || null,
+      details: location.details || null,
+    });
+
+    if (error && !isNaN(Number(location.id))) {
+      const retry = await supabase.from('locations').upsert({
+        id: Number(location.id),
         name: location.name,
         type: location.type,
         capacity: location.capacity || null,
         details: location.details || null,
       });
+      error = retry.error;
+    }
 
-    if (error) throw error;
+    if (error) {
+      console.warn('Erro ao salvar local no Supabase:', error.message);
+      return false;
+    }
+
+    isSupabaseOnline = true;
+    return true;
   } catch (err: any) {
-    console.warn('Erro ao salvar local no Supabase, mantido em LocalStorage:', err?.message || err);
+    console.warn('Exceção ao salvar local no Supabase:', err?.message || err);
+    return false;
   }
 }
 
@@ -291,23 +347,18 @@ export async function dbDeleteLocation(id: string): Promise<void> {
     localStorage.setItem('tr_locations', JSON.stringify(localList.filter((l) => l.id !== id)));
   }
 
-  if (!supabase || !isSupabaseOnline) return;
+  if (!supabase) return;
 
   try {
-    let { error } = await supabase
-      .from('locations')
-      .delete()
-      .eq('id', id);
+    let { error } = await supabase.from('locations').delete().eq('id', id);
 
     if (error && !isNaN(Number(id))) {
-      const retry = await supabase
-        .from('locations')
-        .delete()
-        .eq('id', Number(id));
+      const retry = await supabase.from('locations').delete().eq('id', Number(id));
       error = retry.error;
     }
 
     if (error) throw error;
+    isSupabaseOnline = true;
   } catch (err: any) {
     console.warn('Erro ao excluir local no Supabase:', err?.message || err);
   }
@@ -315,58 +366,68 @@ export async function dbDeleteLocation(id: string): Promise<void> {
 
 // 3. TREINAMENTOS
 export async function dbGetTrainings(fallbackData: Training[]): Promise<Training[]> {
-  const loadFromLocalStorage = (): Training[] => {
+  const getLocalTrainings = (): Training[] => {
     const stored = localStorage.getItem('tr_trainings');
     if (stored !== null) {
       try {
         const parsed: Training[] = JSON.parse(stored);
-        return parsed.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+        }
       } catch {
-        // Fallback if corrupted
+        // Fallback
       }
     }
     localStorage.setItem('tr_trainings', JSON.stringify(fallbackData));
-    localStorage.setItem('tr_initialized', 'true');
     return fallbackData;
   };
 
-  if (!supabase || !isSupabaseOnline) {
-    return loadFromLocalStorage();
+  const localList = getLocalTrainings();
+
+  if (!supabase) {
+    return localList;
   }
 
   try {
-    const { data, error } = await supabase
-      .from('trainings')
-      .select('*');
+    const { data, error } = await supabase.from('trainings').select('*');
 
     if (error) throw error;
 
-    const normalizedData = (data || []).map(normalizeTrainingRow);
+    isSupabaseOnline = true;
+    const remoteList = (data || []).map(normalizeTrainingRow);
 
-    const isInitialized = localStorage.getItem('tr_initialized') === 'true';
-    if (normalizedData.length === 0 && !isInitialized) {
-      console.log('Tabela de treinamentos no Supabase está vazia. Sincronizando dados iniciais...');
-      for (const tr of fallbackData) {
-        await dbSaveTraining(tr);
+    const mergedMap = new Map<string, Training>();
+    remoteList.forEach((tr) => mergedMap.set(tr.id, tr));
+
+    const missingInRemote: Training[] = [];
+    localList.forEach((tr) => {
+      if (!mergedMap.has(tr.id)) {
+        mergedMap.set(tr.id, tr);
+        missingInRemote.push(tr);
       }
-      localStorage.setItem('tr_initialized', 'true');
-      return fallbackData;
-    }
+    });
 
-    const sortedData = normalizedData.sort(
+    const mergedList = Array.from(mergedMap.values()).sort(
       (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
     );
-    localStorage.setItem('tr_trainings', JSON.stringify(sortedData));
-    localStorage.setItem('tr_initialized', 'true');
-    return sortedData;
+
+    localStorage.setItem('tr_trainings', JSON.stringify(mergedList));
+
+    // Upload local missing trainings to Supabase asynchronously
+    if (missingInRemote.length > 0) {
+      for (const tr of missingInRemote) {
+        await dbSaveTraining(tr);
+      }
+    }
+
+    return mergedList;
   } catch (err: any) {
-    console.warn('Serviço Supabase offline ou indisponível. Utilizando LocalStorage:', err?.message || err);
-    isSupabaseOnline = false;
-    return loadFromLocalStorage();
+    console.warn('Serviço Supabase indisponível para treinamentos. Utilizando LocalStorage:', err?.message || err);
+    return localList;
   }
 }
 
-export async function dbSaveTraining(training: Training): Promise<void> {
+export async function dbSaveTraining(training: Training): Promise<boolean> {
   const stored = localStorage.getItem('tr_trainings');
   let localList: Training[] = stored ? JSON.parse(stored) : [];
   const exists = localList.some((t) => t.id === training.id);
@@ -377,43 +438,64 @@ export async function dbSaveTraining(training: Training): Promise<void> {
   }
   localStorage.setItem('tr_trainings', JSON.stringify(localList));
 
-  if (!supabase || !isSupabaseOnline) return;
+  if (!supabase) return false;
 
   try {
-    let { error } = await supabase
-      .from('trainings')
-      .upsert({
+    // 1. Try camelCase payload
+    let { error } = await supabase.from('trainings').upsert({
+      id: training.id,
+      title: training.title,
+      instructorId: training.instructorId || null,
+      locationId: training.locationId || null,
+      startDate: training.startDate,
+      endDate: training.endDate,
+      status: training.status,
+      description: training.description || null,
+      customColor: training.customColor || null,
+    });
+
+    // 2. Fallback to snake_case payload if error
+    if (error) {
+      const retrySnake = await supabase.from('trainings').upsert({
         id: training.id,
         title: training.title,
-        instructorId: training.instructorId || null,
-        locationId: training.locationId || null,
-        startDate: training.startDate,
-        endDate: training.endDate,
+        instructor_id: training.instructorId || null,
+        location_id: training.locationId || null,
+        start_date: training.startDate,
+        end_date: training.endDate,
         status: training.status,
         description: training.description || null,
-        customColor: training.customColor || null,
+        custom_color: training.customColor || null,
       });
-
-    if (error && error.message?.toLowerCase().includes('column')) {
-      const retry = await supabase
-        .from('trainings')
-        .upsert({
-          id: training.id,
-          title: training.title,
-          instructor_id: training.instructorId || null,
-          location_id: training.locationId || null,
-          start_date: training.startDate,
-          end_date: training.endDate,
-          status: training.status,
-          description: training.description || null,
-          custom_color: training.customColor || null,
-        });
-      error = retry.error;
+      error = retrySnake.error;
     }
 
-    if (error) throw error;
+    // 3. Fallback to numeric id if needed
+    if (error && !isNaN(Number(training.id))) {
+      const retryNumeric = await supabase.from('trainings').upsert({
+        id: Number(training.id),
+        title: training.title,
+        instructor_id: training.instructorId || null,
+        location_id: training.locationId || null,
+        start_date: training.startDate,
+        end_date: training.endDate,
+        status: training.status,
+        description: training.description || null,
+        custom_color: training.customColor || null,
+      });
+      error = retryNumeric.error;
+    }
+
+    if (error) {
+      console.warn('Erro ao salvar treinamento no Supabase:', error.message);
+      return false;
+    }
+
+    isSupabaseOnline = true;
+    return true;
   } catch (err: any) {
-    console.warn('Erro ao salvar treinamento no Supabase, mantido em LocalStorage:', err?.message || err);
+    console.warn('Exceção ao salvar treinamento no Supabase:', err?.message || err);
+    return false;
   }
 }
 
@@ -424,39 +506,33 @@ export async function dbDeleteTraining(id: string): Promise<void> {
     localStorage.setItem('tr_trainings', JSON.stringify(localList.filter((t) => t.id !== id)));
   }
 
-  if (!supabase || !isSupabaseOnline) return;
+  if (!supabase) return;
 
   try {
-    let { error } = await supabase
-      .from('trainings')
-      .delete()
-      .eq('id', id);
+    let { error } = await supabase.from('trainings').delete().eq('id', id);
 
     if (error && !isNaN(Number(id))) {
-      const retry = await supabase
-        .from('trainings')
-        .delete()
-        .eq('id', Number(id));
+      const retry = await supabase.from('trainings').delete().eq('id', Number(id));
       error = retry.error;
     }
 
     if (error) throw error;
+    isSupabaseOnline = true;
   } catch (err: any) {
     console.warn('Erro ao excluir treinamento no Supabase:', err?.message || err);
   }
 }
 
-// 4. FORCED BIDIRECTIONAL SYNC FUNCTION
+// 4. FORCED BIDIRECTIONAL SYNC ALL DATA
 export async function dbSyncAllToSupabase(
   instructors: Instructor[],
   locations: Location[],
   trainings: Training[]
 ): Promise<{ instructorsCount: number; locationsCount: number; trainingsCount: number }> {
-  // 1. Sync localstorage
+  // Always persist local storage
   localStorage.setItem('tr_instructors', JSON.stringify(instructors));
   localStorage.setItem('tr_locations', JSON.stringify(locations));
   localStorage.setItem('tr_trainings', JSON.stringify(trainings));
-  localStorage.setItem('tr_initialized', 'true');
 
   if (!supabase) {
     return {
@@ -477,37 +553,6 @@ export async function dbSyncAllToSupabase(
       await dbSaveTraining(tr);
     }
 
-    // Clean up remote orphan records not present in current frontend state
-    const { data: remoteTrainings } = await supabase.from('trainings').select('id');
-    if (remoteTrainings) {
-      const currentIds = new Set(trainings.map((t) => t.id));
-      for (const r of remoteTrainings) {
-        if (!currentIds.has(String(r.id))) {
-          await supabase.from('trainings').delete().eq('id', r.id);
-        }
-      }
-    }
-
-    const { data: remoteInstructors } = await supabase.from('instructors').select('id');
-    if (remoteInstructors) {
-      const currentIds = new Set(instructors.map((i) => i.id));
-      for (const r of remoteInstructors) {
-        if (!currentIds.has(String(r.id))) {
-          await supabase.from('instructors').delete().eq('id', r.id);
-        }
-      }
-    }
-
-    const { data: remoteLocations } = await supabase.from('locations').select('id');
-    if (remoteLocations) {
-      const currentIds = new Set(locations.map((l) => l.id));
-      for (const r of remoteLocations) {
-        if (!currentIds.has(String(r.id))) {
-          await supabase.from('locations').delete().eq('id', r.id);
-        }
-      }
-    }
-
     isSupabaseOnline = true;
   } catch (err: any) {
     console.warn('Sincronização com Supabase:', err?.message || err);
@@ -519,4 +564,3 @@ export async function dbSyncAllToSupabase(
     trainingsCount: trainings.length,
   };
 }
-

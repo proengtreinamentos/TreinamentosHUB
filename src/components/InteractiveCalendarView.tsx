@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Training, Instructor, Location } from '../types';
 import { generateMonthGrid, MONTHS_PT, formatDateString, formatTimeString } from '../utils/dateUtils';
 import { getHolidayForDate, getHolidaysForYear } from '../utils/holidays';
@@ -100,11 +100,14 @@ export default function InteractiveCalendarView({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const gridDays = generateMonthGrid(year, month);
-  const yearHolidays = getHolidaysForYear(year);
+  const gridDays = useMemo(() => generateMonthGrid(year, month), [year, month]);
+  const yearHolidays = useMemo(() => getHolidaysForYear(year), [year]);
+
+  const instructorsMap = useMemo(() => new Map<string, Instructor>(instructors.map((i) => [i.id, i])), [instructors]);
+  const locationsMap = useMemo(() => new Map<string, Location>(locations.map((l) => [l.id, l])), [locations]);
 
   // Month holidays for sidebar notice
-  const currentMonthHolidays = Array.from(yearHolidays.values()).filter((h) => {
+  const currentMonthHolidays = (Array.from(yearHolidays.values()) as Array<{ dateStr: string; name: string }>).filter((h) => {
     const [hY, hM] = h.dateStr.split('-').map(Number);
     return hY === year && hM === month + 1;
   });
@@ -185,9 +188,7 @@ export default function InteractiveCalendarView({
   const [formEndTime, setFormEndTime] = useState('17:00');
   const [formError, setFormError] = useState('');
 
-  // Maps for fast lookup
-  const instructorsMap = new Map<string, Instructor>(instructors.map((i) => [i.id, i]));
-  const locationsMap = new Map<string, Location>(locations.map((l) => [l.id, l]));
+  // Maps for fast lookup (declarations moved up above)
 
   // Open modal for creating new training on a specific date string (YYYY-MM-DD)
   const handleOpenNewForDate = (dateStr: string) => {
@@ -271,31 +272,34 @@ export default function InteractiveCalendarView({
   };
 
   // Group trainings by date (YYYY-MM-DD)
-  const trainingsByDate = new Map<string, Training[]>();
-  trainings.forEach((t) => {
-    const dateKey = t.startDate.split('T')[0];
-    
-    // Apply instructor filter if active
-    if (selectedInstructorFilter) {
-      const selectedInstObj = instructors.find((i) => i.id === selectedInstructorFilter);
-      const selectedNameNorm = selectedInstObj?.name.trim().toLowerCase();
-      const tInstObj = instructorsMap.get(t.instructorId);
-      const tNameNorm = tInstObj?.name.trim().toLowerCase();
+  const trainingsByDate = useMemo(() => {
+    const map = new Map<string, Training[]>();
+    trainings.forEach((t) => {
+      const dateKey = t.startDate.split('T')[0];
+      
+      // Apply instructor filter if active
+      if (selectedInstructorFilter) {
+        const selectedInstObj = instructors.find((i) => i.id === selectedInstructorFilter);
+        const selectedNameNorm = selectedInstObj?.name.trim().toLowerCase();
+        const tInstObj = instructorsMap.get(t.instructorId);
+        const tNameNorm = tInstObj?.name.trim().toLowerCase();
 
-      const matches =
-        t.instructorId === selectedInstructorFilter ||
-        (selectedNameNorm && tNameNorm && selectedNameNorm === tNameNorm);
+        const matches =
+          t.instructorId === selectedInstructorFilter ||
+          (selectedNameNorm && tNameNorm && selectedNameNorm === tNameNorm);
 
-      if (!matches) {
-        return;
+        if (!matches) {
+          return;
+        }
       }
-    }
 
-    if (!trainingsByDate.has(dateKey)) {
-      trainingsByDate.set(dateKey, []);
-    }
-    trainingsByDate.get(dateKey)!.push(t);
-  });
+      if (!map.has(dateKey)) {
+        map.set(dateKey, []);
+      }
+      map.get(dateKey)!.push(t);
+    });
+    return map;
+  }, [trainings, selectedInstructorFilter, instructors, instructorsMap]);
 
   const monthNameUpper = MONTHS_PT[month].toUpperCase();
 

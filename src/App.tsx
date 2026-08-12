@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Instructor, Location, Training, TrainingStatus } from './types';
 import { 
   INITIAL_INSTRUCTORS, 
@@ -68,6 +68,32 @@ export default function App() {
   
   // Sidebar visibility toggle
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Collapsed state for desktop main sidebar
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('tr_sidebar_collapsed');
+      return stored ? JSON.parse(stored) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('tr_sidebar_collapsed', JSON.stringify(isSidebarCollapsed));
+  }, [isSidebarCollapsed]);
+
+  // Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar collapse
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsSidebarCollapsed((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Fullscreen state & ref
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -148,17 +174,7 @@ export default function App() {
           'thiago anjos': '#18181b',
         };
 
-        // Legacy mock names to clean from old test runs
-        const legacyNamesToIgnore = new Set([
-          'jaqueline',
-          'thiago dos anjos',
-          'abel benatto',
-          'naiara custódio',
-          'josé ricardo',
-        ]);
-
         const rawFiltered = dbInstructors
-          .filter((inst) => !legacyNamesToIgnore.has(inst.name.trim().toLowerCase()))
           .map((inst) => {
             const matched = imageColorsMap[inst.name.trim().toLowerCase()];
             return matched ? { ...inst, color: matched } : inst;
@@ -284,11 +300,11 @@ export default function App() {
     setInstructors(updated);
     localStorage.setItem('tr_instructors', JSON.stringify(updated));
 
-    try {
-      await dbSaveInstructor(instructorToSave);
-      triggerToast(`Instrutor "${data.name}" salvo com sucesso!`);
-    } catch (err) {
-      triggerToast('Sincronizado localmente. Erro ao salvar na nuvem.', 'info');
+    const isSavedOnSupabase = await dbSaveInstructor(instructorToSave);
+    if (isSavedOnSupabase) {
+      triggerToast(`Instrutor "${data.name}" salvo no Supabase com sucesso!`, 'success');
+    } else {
+      triggerToast(`Instrutor "${data.name}" salvo localmente. Clique em "Sincronizar com Nuvem" para enviar ao banco.`, 'info');
     }
   };
 
@@ -334,11 +350,11 @@ export default function App() {
     setLocations(updated);
     localStorage.setItem('tr_locations', JSON.stringify(updated));
 
-    try {
-      await dbSaveLocation(locationToSave);
-      triggerToast(`Local "${data.name}" salvo com sucesso!`);
-    } catch (err) {
-      triggerToast('Sincronizado localmente. Erro ao salvar na nuvem.', 'info');
+    const isSavedOnSupabase = await dbSaveLocation(locationToSave);
+    if (isSavedOnSupabase) {
+      triggerToast(`Local "${data.name}" salvo no Supabase com sucesso!`, 'success');
+    } else {
+      triggerToast(`Local "${data.name}" salvo localmente. Clique em "Sincronizar com Nuvem" para enviar ao banco.`, 'info');
     }
   };
 
@@ -384,11 +400,11 @@ export default function App() {
     setTrainings(updated);
     localStorage.setItem('tr_trainings', JSON.stringify(updated));
 
-    try {
-      await dbSaveTraining(trainingToSave);
-      triggerToast(`Treinamento "${data.title}" salvo com sucesso!`);
-    } catch (err) {
-      triggerToast('Sincronizado localmente. Erro ao salvar na nuvem.', 'info');
+    const isSavedOnSupabase = await dbSaveTraining(trainingToSave);
+    if (isSavedOnSupabase) {
+      triggerToast(`Treinamento "${data.title}" salvo no Supabase com sucesso!`, 'success');
+    } else {
+      triggerToast(`Treinamento "${data.title}" salvo localmente. Clique em "Sincronizar com Nuvem" para enviar ao banco.`, 'info');
     }
   };
 
@@ -590,10 +606,11 @@ export default function App() {
   // ----------------------------------------------------
   // COMPUTE FILTERED EVENTS FOR THE CALENDAR VIEWS
   // ----------------------------------------------------
-  const getFilteredCalendarEvents = () => {
+  const filteredEventsForCalendar = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
     return trainings.filter((t) => {
       // 1. Filter by search query
-      const matchesSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !query || t.title.toLowerCase().includes(query) || (t.description && t.description.toLowerCase().includes(query));
       
       // 2. Filter by statuses selected (My Calendars)
       const matchesStatus = selectedStatuses.includes(t.status);
@@ -606,9 +623,7 @@ export default function App() {
 
       return matchesSearch && matchesStatus && matchesInstructor && matchesLocation;
     });
-  };
-
-  const filteredEventsForCalendar = getFilteredCalendarEvents();
+  }, [trainings, searchQuery, selectedStatuses, selectedInstructorIds, selectedLocationIds]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-800 antialiased selection:bg-blue-100">
@@ -620,6 +635,8 @@ export default function App() {
         isSupabaseConfigured={isSupabaseConfigured}
         isMobileOpen={isMobileNavOpen}
         setIsMobileOpen={setIsMobileNavOpen}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
         onSyncRequested={handleSyncAll}
       />
 
