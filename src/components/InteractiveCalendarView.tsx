@@ -109,20 +109,32 @@ export default function InteractiveCalendarView({
     return hY === year && hM === month + 1;
   });
 
-  // Calculate active instructor IDs in the current visible grid / calendar month
+  // Calculate active instructor normalized names and IDs in the current visible grid / calendar month
   const gridDateSet = new Set(gridDays.map((d) => formatDateString(d.date)));
-  const activeInstructorIdsInGrid = new Set<string>();
+  const activeInstructorKeys = new Set<string>();
+
   trainings.forEach((t) => {
     const [tDateStr] = t.startDate.split('T');
     if (gridDateSet.has(tDateStr) && t.instructorId) {
-      activeInstructorIdsInGrid.add(t.instructorId);
+      activeInstructorKeys.add(t.instructorId.toLowerCase());
+      const instObj = instructors.find((i) => i.id === t.instructorId);
+      if (instObj) {
+        activeInstructorKeys.add(instObj.name.trim().toLowerCase());
+      }
     }
   });
 
-  // Instructors list for calendar left sidebar (only those with assigned trainings in current view)
-  const calendarSidebarInstructors = instructors.filter((inst) =>
-    activeInstructorIdsInGrid.has(inst.id)
-  );
+  // Filter instructors for sidebar and strictly deduplicate by normalized name
+  const sidebarMap = new Map<string, Instructor>();
+  instructors.forEach((inst) => {
+    const normName = inst.name.trim().toLowerCase();
+    const isMatch = activeInstructorKeys.has(inst.id.toLowerCase()) || activeInstructorKeys.has(normName);
+    if (isMatch && !sidebarMap.has(normName)) {
+      sidebarMap.set(normName, inst);
+    }
+  });
+
+  const calendarSidebarInstructors = Array.from(sidebarMap.values());
 
   // Filter state by selected instructor on left panel (null = show all)
   const [selectedInstructorFilter, setSelectedInstructorFilter] = useState<string | null>(null);
@@ -264,8 +276,19 @@ export default function InteractiveCalendarView({
     const dateKey = t.startDate.split('T')[0];
     
     // Apply instructor filter if active
-    if (selectedInstructorFilter && t.instructorId !== selectedInstructorFilter) {
-      return;
+    if (selectedInstructorFilter) {
+      const selectedInstObj = instructors.find((i) => i.id === selectedInstructorFilter);
+      const selectedNameNorm = selectedInstObj?.name.trim().toLowerCase();
+      const tInstObj = instructorsMap.get(t.instructorId);
+      const tNameNorm = tInstObj?.name.trim().toLowerCase();
+
+      const matches =
+        t.instructorId === selectedInstructorFilter ||
+        (selectedNameNorm && tNameNorm && selectedNameNorm === tNameNorm);
+
+      if (!matches) {
+        return;
+      }
     }
 
     if (!trainingsByDate.has(dateKey)) {
@@ -328,15 +351,10 @@ export default function InteractiveCalendarView({
           </div>
         </div>
 
-        {/* Center: Title & Calendar Badge */}
-        <div className="hidden lg:flex items-center gap-3 bg-[#0a1c38]/80 px-4 py-2 rounded-2xl border border-slate-700/50">
-          <div className="h-10 w-10 rounded-full border-2 border-white/80 flex items-center justify-center bg-blue-900/60 text-white shadow-md">
-            <CalendarIcon className="h-5 w-5" />
-          </div>
-          <div className="text-xs font-medium text-slate-200">
-            <p className="font-black text-white tracking-wider uppercase">GESTÃO DE TREINAMENTOS</p>
-            <p className="font-extrabold text-red-500">Transforme resultados.</p>
-          </div>
+        {/* Center: Title Text (no card) */}
+        <div className="hidden lg:flex flex-col text-center">
+          <p className="text-xs font-black text-white tracking-widest uppercase">GESTÃO DE TREINAMENTOS</p>
+          <p className="text-xs font-extrabold text-red-500 tracking-tight">Transforme resultados.</p>
         </div>
 
         {/* Right: Quick Controls & Standalone Fullscreen Button */}
@@ -623,26 +641,26 @@ export default function InteractiveCalendarView({
         )}
 
         {/* RIGHT AREA: CALENDAR GRID */}
-        <div className="flex-1 flex flex-col bg-white border border-slate-300 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="flex-1 flex flex-col bg-white border-2 border-slate-300 rounded-2xl overflow-hidden shadow-2xl">
           
           {/* Weekday Header (DOM, SEG, TER, QUA, QUI, SEX, SÁB) */}
-          <div className="grid grid-cols-7 bg-[#001130] border-b border-slate-800">
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-red-500 tracking-wider">
+          <div className="grid grid-cols-7 bg-[#001130] border-b-2 border-slate-800">
+            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-red-500 tracking-wider border-r border-slate-800/80">
               DOM
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider">
+            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               SEG
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider">
+            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               TER
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider">
+            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               QUA
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider">
+            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               QUI
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider">
+            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               SEX
             </div>
             <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider">
@@ -668,12 +686,12 @@ export default function InteractiveCalendarView({
                 <div
                   key={cell.key}
                   onClick={() => handleOpenNewForDate(dateStr)}
-                  className={`min-h-[115px] sm:min-h-[135px] p-1.5 flex flex-col gap-1 transition-colors cursor-pointer relative group ${
+                  className={`min-h-[120px] sm:min-h-[145px] p-1.5 flex flex-col gap-1 transition-colors cursor-pointer relative group border-r border-b border-slate-300/80 ${
                     holiday
-                      ? 'bg-amber-50/50 hover:bg-amber-100/60'
+                      ? 'bg-amber-50/60 hover:bg-amber-100/70'
                       : cell.isCurrentMonth
                       ? 'bg-[#f8fafc] text-slate-800 hover:bg-blue-50/70'
-                      : 'bg-slate-100/80 text-slate-400 hover:bg-slate-200/70'
+                      : 'bg-slate-100/90 text-slate-400 hover:bg-slate-200/70'
                   }`}
                 >
                   {/* Top Day Number Header */}
@@ -739,7 +757,7 @@ export default function InteractiveCalendarView({
                       const timeStr = formatTimeString(t.startDate) || '08:00';
                       const isCanceled = t.status === 'cancelado';
 
-                      const cardBg = isCanceled ? '#f1f5f9' : '#ffffff';
+                      const cardBg = isCanceled ? '#f8fafc' : '#ffffff';
 
                       return (
                         <div
@@ -749,22 +767,22 @@ export default function InteractiveCalendarView({
                             backgroundColor: cardBg,
                             borderLeftColor: isCanceled ? '#cbd5e1' : instColor 
                           }}
-                          className={`rounded-r-md px-2 py-1.5 text-2xs ${
+                          className={`rounded-r-lg px-2 py-1.5 text-2xs ${
                             isCanceled 
-                              ? 'border-l-4 border-dashed border-slate-300' 
-                              : 'border-l-4'
-                          } border-y border-r border-slate-200 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-0.5 group/card hover:translate-x-0.5 select-none`}
+                              ? 'border-l-[5px] border-dashed border-slate-300' 
+                              : 'border-l-[5px]'
+                          } border-y border-r border-slate-200/90 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-1 group/card hover:translate-x-0.5 select-none`}
                           title={`${t.title} - ${inst?.name || ''} (${loc?.name || ''}) - Clique para editar`}
                         >
-                          {/* Row 1: Time + Title */}
+                          {/* Row 1: Time Pill Badge + Title */}
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span 
-                              style={{ color: isCanceled ? '#94a3b8' : instColor }} 
-                              className="font-black text-[11px] sm:text-[12px] flex-shrink-0 tracking-tight"
+                              style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
+                              className="px-1.5 py-0.5 rounded text-[10px] sm:text-[10.5px] font-black text-white tracking-tight flex-shrink-0 shadow-2xs"
                             >
                               {timeStr}
                             </span>
-                            <span className={`truncate font-extrabold text-[11px] sm:text-[12px] leading-tight ${
+                            <span className={`truncate font-black text-[11px] sm:text-[12px] leading-tight ${
                               isCanceled ? 'line-through text-slate-400' : 'text-slate-900'
                             }`}>
                               {t.title}
@@ -772,14 +790,17 @@ export default function InteractiveCalendarView({
                           </div>
 
                           {/* Row 2: Location */}
-                          <div className="flex items-center gap-1 text-[9.5px] sm:text-[10px] text-slate-500 font-medium truncate">
+                          <div className="flex items-center gap-1 text-[9.5px] sm:text-[10px] text-slate-500 font-semibold truncate">
                             <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-slate-400" />
                             <span className="truncate">{loc?.name || 'Local N/A'}</span>
                           </div>
 
-                          {/* Row 3: Instructor */}
-                          <div className="flex items-center gap-1 text-[9.5px] sm:text-[10px] text-slate-600 font-semibold truncate">
-                            <User className="h-2.5 w-2.5 flex-shrink-0 text-slate-400" />
+                          {/* Row 3: Instructor Name */}
+                          <div className="flex items-center gap-1 text-[9.5px] sm:text-[10px] font-extrabold truncate text-slate-700">
+                            <div 
+                              className="h-2 w-2 rounded-full flex-shrink-0" 
+                              style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
+                            />
                             <span className="truncate">{inst?.name || 'Instrutor N/A'}</span>
                           </div>
                         </div>
@@ -791,46 +812,6 @@ export default function InteractiveCalendarView({
             })}
           </div>
 
-        </div>
-
-      </div>
-
-      {/* ============================================================ */}
-      {/* BOTTOM FOOTER BAR WITH 3 PILLARS + PROENG WATERMARK          */}
-      {/* ============================================================ */}
-      <div className="relative z-10 pt-5 mt-5 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-        
-        {/* Pillar 1 */}
-        <div className="flex items-center gap-3 bg-[#0a1c38]/60 p-2.5 rounded-xl border border-slate-800">
-          <div className="p-2 rounded-full border-2 border-red-500 text-red-500 bg-red-950/30 flex-shrink-0">
-            <Target className="h-5 w-5 stroke-[2.5]" />
-          </div>
-          <p className="text-xs font-medium text-slate-200 leading-snug">
-            Mais conhecimento, <br />
-            <span className="font-extrabold text-red-500">mais performance.</span>
-          </p>
-        </div>
-
-        {/* Pillar 2 */}
-        <div className="flex items-center gap-3 bg-[#0a1c38]/60 p-2.5 rounded-xl border border-slate-800">
-          <div className="p-2 rounded-full border-2 border-white/80 text-white bg-blue-900/30 flex-shrink-0">
-            <ShieldCheck className="h-5 w-5 stroke-[2.5]" />
-          </div>
-          <p className="text-xs font-medium text-slate-200 leading-snug">
-            Treinamento hoje, <br />
-            <span className="font-extrabold text-red-500">resultado sempre.</span>
-          </p>
-        </div>
-
-        {/* Pillar 3 */}
-        <div className="flex items-center gap-3 bg-[#0a1c38]/60 p-2.5 rounded-xl border border-slate-800">
-          <div className="p-2 rounded-full border-2 border-red-500 text-red-500 bg-red-950/30 flex-shrink-0">
-            <TrendingUp className="h-5 w-5 stroke-[2.5]" />
-          </div>
-          <p className="text-xs font-medium text-slate-200 leading-snug">
-            Investir em pessoas <br />
-            <span className="font-extrabold text-red-500">é construir o futuro.</span>
-          </p>
         </div>
 
       </div>

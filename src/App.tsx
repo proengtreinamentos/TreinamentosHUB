@@ -157,20 +157,31 @@ export default function App() {
           'josé ricardo',
         ]);
 
-        let updatedInstructors = dbInstructors
+        const rawFiltered = dbInstructors
           .filter((inst) => !legacyNamesToIgnore.has(inst.name.trim().toLowerCase()))
           .map((inst) => {
             const matched = imageColorsMap[inst.name.trim().toLowerCase()];
             return matched ? { ...inst, color: matched } : inst;
           });
 
-        // Ensure all canonical seed instructors exist
-        const loadedIds = new Set(updatedInstructors.map((i) => i.id));
-        INITIAL_INSTRUCTORS.forEach((seedInst) => {
-          if (!loadedIds.has(seedInst.id)) {
-            updatedInstructors.push(seedInst);
+        // Deduplicate strictly by normalized instructor name
+        const uniqueNameMap = new Map<string, Instructor>();
+        rawFiltered.forEach((inst) => {
+          const normName = inst.name.trim().toLowerCase();
+          if (!uniqueNameMap.has(normName)) {
+            uniqueNameMap.set(normName, inst);
           }
         });
+
+        // Ensure all canonical seed instructors exist
+        INITIAL_INSTRUCTORS.forEach((seedInst) => {
+          const normName = seedInst.name.trim().toLowerCase();
+          if (!uniqueNameMap.has(normName)) {
+            uniqueNameMap.set(normName, seedInst);
+          }
+        });
+
+        const updatedInstructors = Array.from(uniqueNameMap.values());
 
         setInstructors(updatedInstructors);
         localStorage.setItem('tr_instructors', JSON.stringify(updatedInstructors));
@@ -229,7 +240,11 @@ export default function App() {
         (i) => !legacyNamesToIgnore.has(i.name.trim().toLowerCase())
       );
 
-      const completeInstructors = mergeLists(cleanedInstructors, INITIAL_INSTRUCTORS);
+      const instNameMap = new Map<string, Instructor>();
+      INITIAL_INSTRUCTORS.forEach((item) => instNameMap.set(item.name.trim().toLowerCase(), item));
+      cleanedInstructors.forEach((item) => instNameMap.set(item.name.trim().toLowerCase(), item));
+      const completeInstructors = Array.from(instNameMap.values());
+
       const completeLocations = mergeLists(locations, INITIAL_LOCATIONS);
       const completeTrainings = mergeLists(trainings, INITIAL_TRAININGS);
 
