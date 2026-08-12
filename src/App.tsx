@@ -168,12 +168,12 @@ export default function App() {
         const dbTrainings = await dbGetTrainings(INITIAL_TRAININGS);
         setTrainings(dbTrainings);
         
-        if (isSupabaseConfigured) {
+        if (getStorageMode() === 'supabase') {
           triggerToast('Conectado ao banco de dados Supabase com sucesso!', 'success');
         }
       } catch (err) {
-        console.error('Erro ao carregar dados:', err);
-        triggerToast('Erro ao carregar dados do banco. Operando localmente.', 'error');
+        console.warn('Erro ou indisponibilidade ao carregar dados remotos:', err);
+        triggerToast('Dados carregados no modo de armazenamento local.', 'info');
       } finally {
         setIsDataLoaded(true);
       }

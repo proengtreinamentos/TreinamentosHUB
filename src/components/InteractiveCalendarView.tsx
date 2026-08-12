@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Training, Instructor, Location } from '../types';
 import { generateMonthGrid, MONTHS_PT, formatDateString, formatTimeString } from '../utils/dateUtils';
+import { getHolidayForDate, getHolidaysForYear } from '../utils/holidays';
 import { 
   Users, 
   Calendar as CalendarIcon, 
@@ -98,12 +99,19 @@ export default function InteractiveCalendarView({
   const month = currentDate.getMonth();
 
   const gridDays = generateMonthGrid(year, month);
+  const yearHolidays = getHolidaysForYear(year);
+
+  // Month holidays for sidebar notice
+  const currentMonthHolidays = Array.from(yearHolidays.values()).filter((h) => {
+    const [hY, hM] = h.dateStr.split('-').map(Number);
+    return hY === year && hM === month + 1;
+  });
 
   // Filter state by selected instructor on left panel (null = show all)
   const [selectedInstructorFilter, setSelectedInstructorFilter] = useState<string | null>(null);
 
   // Highlight notice box on left panel
-  const [highlightText, setHighlightText] = useState('Feriado: 20 de agosto (Aniversário de São Bernardo)');
+  const [highlightText, setHighlightText] = useState('Destaque: Feriado Municipal em 20/08 (Aniversário de São Bernardo do Campo)');
   const [isEditingHighlight, setIsEditingHighlight] = useState(false);
 
   // Quick Add / Edit Modal state
@@ -421,15 +429,15 @@ export default function InteractiveCalendarView({
             })}
           </div>
 
-          {/* DESTAQUE Card */}
-          <div className="bg-white rounded-2xl p-3.5 border-2 border-red-500/80 text-slate-900 shadow-xl relative group mt-auto">
-            <div className="flex items-center justify-between mb-1.5">
+          {/* DESTAQUE & FERIADOS Card */}
+          <div className="bg-white rounded-2xl p-3.5 border-2 border-red-500/80 text-slate-900 shadow-xl relative group mt-auto flex flex-col gap-2">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-full bg-red-600 text-white shadow-xs">
                   <CalendarIcon className="h-4 w-4 stroke-[2.5]" />
                 </div>
                 <span className="text-xs font-black tracking-wider text-red-600 uppercase">
-                  Destaque
+                  Feriados & Destaques
                 </span>
               </div>
               <button
@@ -441,8 +449,25 @@ export default function InteractiveCalendarView({
               </button>
             </div>
 
+            {currentMonthHolidays.length > 0 && (
+              <div className="bg-red-50/90 border border-red-200 rounded-xl p-2 flex flex-col gap-1">
+                <span className="text-[10px] font-black uppercase text-red-700 tracking-wider">
+                  Feriados em {MONTHS_PT[month]}:
+                </span>
+                {currentMonthHolidays.map((h) => {
+                  const [, , hD] = h.dateStr.split('-');
+                  return (
+                    <div key={h.dateStr} className="flex items-start gap-1 text-2xs text-slate-800">
+                      <span className="font-black text-red-600">{hD}/{String(month + 1).padStart(2, '0')}:</span>
+                      <span className="font-extrabold truncate" title={h.name}>{h.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {isEditingHighlight ? (
-              <div className="flex flex-col gap-2 mt-2">
+              <div className="flex flex-col gap-2">
                 <textarea
                   value={highlightText}
                   onChange={(e) => setHighlightText(e.target.value)}
@@ -499,6 +524,7 @@ export default function InteractiveCalendarView({
               const dateStr = formatDateString(cell.date);
               const dayTrainings = trainingsByDate.get(dateStr) || [];
               const dayNum = cell.date.getDate();
+              const holiday = getHolidayForDate(cell.date);
 
               let dayLabel = `${dayNum}`;
               if (dayNum === 1) {
@@ -511,18 +537,36 @@ export default function InteractiveCalendarView({
                   key={cell.key}
                   onClick={() => handleOpenNewForDate(dateStr)}
                   className={`min-h-[115px] sm:min-h-[135px] p-1.5 flex flex-col gap-1 transition-colors cursor-pointer relative group ${
-                    cell.isCurrentMonth
+                    holiday
+                      ? 'bg-amber-50/50 hover:bg-amber-100/60'
+                      : cell.isCurrentMonth
                       ? 'bg-[#f8fafc] text-slate-800 hover:bg-blue-50/70'
                       : 'bg-slate-100/80 text-slate-400 hover:bg-slate-200/70'
                   }`}
                 >
                   {/* Top Day Number Header */}
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className={`text-xs sm:text-sm font-extrabold select-none ${
-                      cell.isCurrentMonth ? 'text-slate-800' : 'text-slate-400'
-                    }`}>
-                      {dayLabel}
-                    </span>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className={`text-xs sm:text-sm font-extrabold select-none ${
+                        holiday 
+                          ? 'text-red-700 font-black' 
+                          : cell.isCurrentMonth ? 'text-slate-800' : 'text-slate-400'
+                      }`}>
+                        {dayLabel}
+                      </span>
+                      {holiday && (
+                        <span 
+                          className={`inline-flex items-center px-1 py-0.2 rounded text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-tight truncate max-w-[120px] ${
+                            holiday.type === 'municipal' 
+                              ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                              : 'bg-red-100 text-red-800 border border-red-200'
+                          }`} 
+                          title={holiday.name}
+                        >
+                          {holiday.type === 'municipal' ? 'Feriado Municipal' : 'Feriado'}
+                        </span>
+                      )}
+                    </div>
 
                     {/* Plus Icon on Hover */}
                     <button
@@ -536,6 +580,21 @@ export default function InteractiveCalendarView({
                       <Plus className="h-3 w-3" />
                     </button>
                   </div>
+
+                  {/* Holiday Indicator Banner */}
+                  {holiday && (
+                    <div 
+                      className={`rounded px-1.5 py-1 text-[9.5px] sm:text-[10px] font-bold flex items-center gap-1.5 border shadow-2xs ${
+                        holiday.type === 'municipal'
+                          ? 'bg-amber-100/95 text-amber-950 border-amber-300'
+                          : 'bg-red-100/95 text-red-950 border-red-200'
+                      }`}
+                      title={holiday.name}
+                    >
+                      <span className="text-[11px] leading-none flex-shrink-0">🎉</span>
+                      <span className="truncate font-black">{holiday.name}</span>
+                    </div>
+                  )}
 
                   {/* List of Detailed Training Cards */}
                   <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto min-h-0 pr-0.5 scrollbar-thin">
