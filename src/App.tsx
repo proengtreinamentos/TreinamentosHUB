@@ -27,6 +27,7 @@ import {
 
 // Components
 import Sidebar from './components/Sidebar';
+import MainSidebar, { TabType } from './components/MainSidebar';
 import CalendarHeader, { CalendarViewType } from './components/CalendarHeader';
 import MonthView from './components/MonthView';
 import WeekView from './components/WeekView';
@@ -54,10 +55,9 @@ import {
   Database,
   X,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Menu
 } from 'lucide-react';
-
-type TabType = 'calendario' | 'interativo' | 'treinamentos' | 'instrutores' | 'locais';
 
 interface Toast {
   id: string;
@@ -68,6 +68,7 @@ interface Toast {
 export default function App() {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<TabType>('calendario');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   
   // Sidebar visibility toggle
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -524,114 +525,56 @@ export default function App() {
   const filteredEventsForCalendar = getFilteredCalendarEvents();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800 antialiased selection:bg-blue-100">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-800 antialiased selection:bg-blue-100">
       
-      {/* 🚀 Sleek Portal Navbar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-6 py-3 shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-600 text-white p-2 rounded-xl shadow-md shadow-blue-100 flex items-center justify-center">
-            <CalendarIcon className="h-6 w-6 stroke-[2.2]" />
-          </div>
-          <div>
-            <h1 className="text-md font-black tracking-tight text-slate-900 leading-none">
-              Portal de Treinamento - Proeng
-            </h1>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-1">
-              Plataforma Corporativa
-            </span>
-          </div>
-        </div>
+      {/* 🚀 Main Left Sidebar Navigation */}
+      <MainSidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isSupabaseConfigured={isSupabaseConfigured}
+        isMobileOpen={isMobileNavOpen}
+        setIsMobileOpen={setIsMobileNavOpen}
+      />
 
-        {/* Tab selector */}
-        <nav className="flex items-center rounded-xl bg-slate-100/80 p-1 border border-slate-100 shadow-inner">
-          <button
-            id="tab-calendario"
-            onClick={() => setActiveTab('calendario')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'calendario'
-                ? 'bg-white text-slate-950 shadow-sm border border-slate-100/50'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <CalendarIcon className="h-4 w-4" />
-            Agenda Calendário
-          </button>
-
-          <button
-            id="tab-interativo"
-            onClick={() => setActiveTab('interativo')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'interativo'
-                ? 'bg-[#0e223d] text-white shadow-sm border border-[#1b3a63]'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <Sparkles className="h-4 w-4 text-blue-500" />
-            Calendário Interativo
-          </button>
-          
-          <button
-            id="tab-treinamentos"
-            onClick={() => setActiveTab('treinamentos')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'treinamentos'
-                ? 'bg-white text-slate-950 shadow-sm border border-slate-100/50'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <ListTodo className="h-4 w-4" />
-            Lista Geral
-          </button>
-
-          <button
-            id="tab-instrutores"
-            onClick={() => setActiveTab('instrutores')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'instrutores'
-                ? 'bg-white text-slate-950 shadow-sm border border-slate-100/50'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            Instrutores
-          </button>
-
-          <button
-            id="tab-locais"
-            onClick={() => setActiveTab('locais')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'locais'
-                ? 'bg-white text-slate-950 shadow-sm border border-slate-100/50'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <MapPin className="h-4 w-4" />
-            Locais
-          </button>
-        </nav>
-
-        {/* Right Info: local cache indicator */}
-        <div className="flex items-center gap-3 self-end sm:self-auto">
-          {isSupabaseConfigured ? (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 border border-blue-100 text-[10px] font-bold text-blue-800 shadow-sm shadow-blue-50 select-none" title="Conectado com sucesso ao banco de dados Supabase na nuvem!">
-              <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-              <Database className="h-3.5 w-3.5 text-blue-600" />
-              Supabase Nuvem
+      {/* Main Right Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        {/* Mobile Top Header with Hamburger Menu Toggle */}
+        <header className="md:hidden sticky top-0 z-30 bg-[#001130] text-white px-4 py-3 shadow-md flex items-center justify-between border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsMobileNavOpen(true)}
+              className="p-2 rounded-xl bg-slate-800 text-slate-200 hover:text-white transition-colors cursor-pointer"
+              title="Abrir Menu Lateral"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            
+            <div className="flex items-center gap-1.5 bg-[#07193d] px-2.5 py-1 rounded-lg border border-slate-700">
+              <span className="text-base font-black italic tracking-tighter text-white">
+                PRO
+              </span>
+              <span className="text-base font-black italic tracking-tighter text-red-600">
+                ENG
+              </span>
             </div>
-          ) : (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 border border-amber-100 text-[10px] font-bold text-amber-800 shadow-sm shadow-amber-50 select-none" title="Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no seu arquivo .env ou no painel do projeto para habilitar persistência automática na nuvem!">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              <Database className="h-3.5 w-3.5 text-amber-600" />
-              Sem Banco (Local)
-            </div>
-          )}
-        </div>
-      </header>
+          </div>
 
-      {/* 🚀 Tab View Routing */}
-      <main className="flex-1 flex flex-col">
-        {activeTab === 'calendario' && (
-          <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 max-w-[1600px] w-full mx-auto">
+          <div className="text-right">
+            <p className="text-xs font-black uppercase text-red-500 tracking-wider">
+              {activeTab === 'calendario' && 'Agenda (Calendário)'}
+              {activeTab === 'interativo' && 'Calendário Interativo'}
+              {activeTab === 'treinamentos' && 'Lista de Treinamentos'}
+              {activeTab === 'instrutores' && 'Instrutores'}
+              {activeTab === 'locais' && 'Locais'}
+            </p>
+          </div>
+        </header>
+
+        {/* 🚀 Tab View Routing */}
+        <main className="flex-1 flex flex-col overflow-y-auto">
+          {activeTab === 'calendario' && (
+            <div className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 max-w-[1600px] w-full mx-auto">
             {/* Sidebar workspace */}
             {isSidebarOpen && (
               <Sidebar
@@ -802,6 +745,7 @@ export default function App() {
           />
         )}
       </main>
+    </div>
 
       {/* 🚀 MODALS WORKSPACE */}
       

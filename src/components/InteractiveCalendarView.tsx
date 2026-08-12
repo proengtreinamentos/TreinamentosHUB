@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Training, Instructor, Location } from '../types';
-import { generateMonthGrid, MONTHS_PT, formatDateString } from '../utils/dateUtils';
+import { generateMonthGrid, MONTHS_PT, formatDateString, formatTimeString } from '../utils/dateUtils';
 import { 
   Users, 
   Calendar as CalendarIcon, 
@@ -17,7 +17,8 @@ import {
   Target,
   ShieldCheck,
   TrendingUp,
-  Clock
+  Clock,
+  MapPin
 } from 'lucide-react';
 
 interface InteractiveCalendarViewProps {
@@ -432,7 +433,7 @@ export default function InteractiveCalendarView({
                 <div
                   key={cell.key}
                   onClick={() => handleOpenNewForDate(dateStr)}
-                  className={`min-h-[100px] sm:min-h-[115px] p-1.5 flex flex-col gap-1 transition-colors cursor-pointer relative group ${
+                  className={`min-h-[115px] sm:min-h-[135px] p-1.5 flex flex-col gap-1 transition-colors cursor-pointer relative group ${
                     cell.isCurrentMonth
                       ? 'bg-[#f8fafc] text-slate-800 hover:bg-blue-50/70'
                       : 'bg-slate-100/80 text-slate-400 hover:bg-slate-200/70'
@@ -459,25 +460,60 @@ export default function InteractiveCalendarView({
                     </button>
                   </div>
 
-                  {/* List of Training Pill Badges */}
-                  <div className="flex-1 flex flex-col gap-1 overflow-y-auto min-h-0 pr-0.5 scrollbar-thin">
+                  {/* List of Detailed Training Cards */}
+                  <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto min-h-0 pr-0.5 scrollbar-thin">
                     {dayTrainings.map((t) => {
                       const inst = instructorsMap.get(t.instructorId);
+                      const loc = locationsMap.get(t.locationId);
 
-                      // Determine color matching preset or instructor
-                      const bgHex = t.customColor || inst?.color || '#6b21a8';
+                      // Determine color matching instructor or custom selection
+                      const instColor = t.customColor || inst?.color || '#3b82f6';
+                      const timeStr = formatTimeString(t.startDate) || '08:00';
+                      const isCanceled = t.status === 'cancelado';
+
+                      const cardBg = isCanceled ? '#f1f5f9' : '#ffffff';
 
                       return (
                         <div
                           key={t.id}
                           onClick={(e) => handleOpenEditTraining(t, e)}
-                          style={{ backgroundColor: bgHex }}
-                          className="rounded-md px-2 py-1 text-[10px] sm:text-[11px] font-black text-white shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-between gap-1 leading-tight select-none border border-black/10"
-                          title={`${t.title} - Clique para editar`}
+                          style={{ 
+                            backgroundColor: cardBg,
+                            borderLeftColor: isCanceled ? '#cbd5e1' : instColor 
+                          }}
+                          className={`rounded-r-md px-2 py-1.5 text-2xs ${
+                            isCanceled 
+                              ? 'border-l-4 border-dashed border-slate-300' 
+                              : 'border-l-4'
+                          } border-y border-r border-slate-200 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-0.5 group/card hover:translate-x-0.5 select-none`}
+                          title={`${t.title} - ${inst?.name || ''} (${loc?.name || ''}) - Clique para editar`}
                         >
-                          <span className="truncate uppercase tracking-tight">
-                            {t.title}
-                          </span>
+                          {/* Row 1: Time + Title */}
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span 
+                              style={{ color: isCanceled ? '#94a3b8' : instColor }} 
+                              className="font-black text-[11px] sm:text-[12px] flex-shrink-0 tracking-tight"
+                            >
+                              {timeStr}
+                            </span>
+                            <span className={`truncate font-extrabold text-[11px] sm:text-[12px] leading-tight ${
+                              isCanceled ? 'line-through text-slate-400' : 'text-slate-900'
+                            }`}>
+                              {t.title}
+                            </span>
+                          </div>
+
+                          {/* Row 2: Location */}
+                          <div className="flex items-center gap-1 text-[9.5px] sm:text-[10px] text-slate-500 font-medium truncate">
+                            <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-slate-400" />
+                            <span className="truncate">{loc?.name || 'Local N/A'}</span>
+                          </div>
+
+                          {/* Row 3: Instructor */}
+                          <div className="flex items-center gap-1 text-[9.5px] sm:text-[10px] text-slate-600 font-semibold truncate">
+                            <User className="h-2.5 w-2.5 flex-shrink-0 text-slate-400" />
+                            <span className="truncate">{inst?.name || 'Instrutor N/A'}</span>
+                          </div>
                         </div>
                       );
                     })}
