@@ -372,123 +372,125 @@ export default function InteractiveCalendarView({
       {/* ============================================================ */}
       <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-5">
         
-        {/* LEFT PANEL: INSTRUTORES + DESTAQUE */}
-        <div className="w-full md:w-60 lg:w-64 flex flex-col gap-4 flex-shrink-0">
-          
-          {/* INSTRUTORES Section Header */}
-          <div className="bg-[#001130] border border-slate-700 rounded-xl p-2.5 shadow-md flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-1 rounded-md bg-blue-600 text-white">
-                <Users className="h-4 w-4 stroke-[2.5]" />
-              </div>
-              <h3 className="text-xs font-black tracking-widest uppercase text-white">
-                Instrutores
-              </h3>
-            </div>
-            {selectedInstructorFilter && (
-              <button
-                onClick={() => setSelectedInstructorFilter(null)}
-                className="text-[10px] font-bold text-red-400 hover:text-red-300 underline"
-              >
-                Limpar
-              </button>
-            )}
-          </div>
-
-          {/* Instructor Cards List (White cards like reference image) */}
-          <div className="flex flex-col gap-2">
-            {instructors.map((inst) => {
-              const isSelected = selectedInstructorFilter === inst.id;
-              
-              // Assign distinct colors matching image if needed
-              const avatarBg = inst.color || '#ea580c';
-
-              return (
-                <button
-                  key={inst.id}
-                  onClick={() => setSelectedInstructorFilter(isSelected ? null : inst.id)}
-                  className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-all cursor-pointer shadow-sm ${
-                    isSelected
-                      ? 'bg-blue-50 ring-2 ring-blue-600 text-slate-900'
-                      : 'bg-white hover:bg-slate-100 text-slate-800'
-                  }`}
-                >
-                  <div 
-                    className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-xs flex-shrink-0"
-                    style={{ backgroundColor: avatarBg }}
-                  >
-                    <User className="h-4 w-4 stroke-[2.5]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-slate-900 truncate leading-tight">
-                      {inst.name}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* DESTAQUE & FERIADOS Card */}
-          <div className="bg-white rounded-2xl p-3.5 border-2 border-red-500/80 text-slate-900 shadow-xl relative group mt-auto flex flex-col gap-2">
-            <div className="flex items-center justify-between">
+        {/* LEFT PANEL: INSTRUTORES + DESTAQUE (Hidden in Fullscreen Mode) */}
+        {!isFullscreen && (
+          <div className="w-full md:w-60 lg:w-64 flex flex-col gap-4 flex-shrink-0">
+            
+            {/* INSTRUTORES Section Header */}
+            <div className="bg-[#001130] border border-slate-700 rounded-xl p-2.5 shadow-md flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-full bg-red-600 text-white shadow-xs">
-                  <CalendarIcon className="h-4 w-4 stroke-[2.5]" />
+                <div className="p-1 rounded-md bg-blue-600 text-white">
+                  <Users className="h-4 w-4 stroke-[2.5]" />
                 </div>
-                <span className="text-xs font-black tracking-wider text-red-600 uppercase">
-                  Feriados & Destaques
-                </span>
+                <h3 className="text-xs font-black tracking-widest uppercase text-white">
+                  Instrutores
+                </h3>
               </div>
-              <button
-                onClick={() => setIsEditingHighlight(!isEditingHighlight)}
-                className="text-slate-400 hover:text-slate-700 p-1 rounded transition-colors cursor-pointer"
-                title="Editar destaque"
-              >
-                <Edit3 className="h-3.5 w-3.5" />
-              </button>
+              {selectedInstructorFilter && (
+                <button
+                  onClick={() => setSelectedInstructorFilter(null)}
+                  className="text-[10px] font-bold text-red-400 hover:text-red-300 underline"
+                >
+                  Limpar
+                </button>
+              )}
             </div>
 
-            {currentMonthHolidays.length > 0 && (
-              <div className="bg-red-50/90 border border-red-200 rounded-xl p-2 flex flex-col gap-1">
-                <span className="text-[10px] font-black uppercase text-red-700 tracking-wider">
-                  Feriados em {MONTHS_PT[month]}:
-                </span>
-                {currentMonthHolidays.map((h) => {
-                  const [, , hD] = h.dateStr.split('-');
-                  return (
-                    <div key={h.dateStr} className="flex items-start gap-1 text-2xs text-slate-800">
-                      <span className="font-black text-red-600">{hD}/{String(month + 1).padStart(2, '0')}:</span>
-                      <span className="font-extrabold truncate" title={h.name}>{h.name}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {/* Instructor Cards List (White cards like reference image) */}
+            <div className="flex flex-col gap-2">
+              {instructors.map((inst) => {
+                const isSelected = selectedInstructorFilter === inst.id;
+                
+                // Assign distinct colors matching image if needed
+                const avatarBg = inst.color || '#ea580c';
 
-            {isEditingHighlight ? (
-              <div className="flex flex-col gap-2">
-                <textarea
-                  value={highlightText}
-                  onChange={(e) => setHighlightText(e.target.value)}
-                  className="text-xs border border-slate-300 rounded-md p-2 w-full resize-none text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  rows={2}
-                />
+                return (
+                  <button
+                    key={inst.id}
+                    onClick={() => setSelectedInstructorFilter(isSelected ? null : inst.id)}
+                    className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-all cursor-pointer shadow-sm ${
+                      isSelected
+                        ? 'bg-blue-50 ring-2 ring-blue-600 text-slate-900'
+                        : 'bg-white hover:bg-slate-100 text-slate-800'
+                    }`}
+                  >
+                    <div 
+                      className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-xs flex-shrink-0"
+                      style={{ backgroundColor: avatarBg }}
+                    >
+                      <User className="h-4 w-4 stroke-[2.5]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-slate-900 truncate leading-tight">
+                        {inst.name}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* DESTAQUE & FERIADOS Card */}
+            <div className="bg-white rounded-2xl p-3.5 border-2 border-red-500/80 text-slate-900 shadow-xl relative group mt-auto flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-full bg-red-600 text-white shadow-xs">
+                    <CalendarIcon className="h-4 w-4 stroke-[2.5]" />
+                  </div>
+                  <span className="text-xs font-black tracking-wider text-red-600 uppercase">
+                    Feriados & Destaques
+                  </span>
+                </div>
                 <button
-                  onClick={() => setIsEditingHighlight(false)}
-                  className="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-md hover:bg-red-700 transition-colors self-end cursor-pointer"
+                  onClick={() => setIsEditingHighlight(!isEditingHighlight)}
+                  className="text-slate-400 hover:text-slate-700 p-1 rounded transition-colors cursor-pointer"
+                  title="Editar destaque"
                 >
-                  Salvar
+                  <Edit3 className="h-3.5 w-3.5" />
                 </button>
               </div>
-            ) : (
-              <p className="text-xs font-extrabold text-slate-800 leading-snug">
-                {highlightText}
-              </p>
-            )}
-          </div>
 
-        </div>
+              {currentMonthHolidays.length > 0 && (
+                <div className="bg-red-50/90 border border-red-200 rounded-xl p-2 flex flex-col gap-1">
+                  <span className="text-[10px] font-black uppercase text-red-700 tracking-wider">
+                    Feriados em {MONTHS_PT[month]}:
+                  </span>
+                  {currentMonthHolidays.map((h) => {
+                    const [, , hD] = h.dateStr.split('-');
+                    return (
+                      <div key={h.dateStr} className="flex items-start gap-1 text-2xs text-slate-800">
+                        <span className="font-black text-red-600">{hD}/{String(month + 1).padStart(2, '0')}:</span>
+                        <span className="font-extrabold truncate" title={h.name}>{h.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {isEditingHighlight ? (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    value={highlightText}
+                    onChange={(e) => setHighlightText(e.target.value)}
+                    className="text-xs border border-slate-300 rounded-md p-2 w-full resize-none text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    rows={2}
+                  />
+                  <button
+                    onClick={() => setIsEditingHighlight(false)}
+                    className="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-md hover:bg-red-700 transition-colors self-end cursor-pointer"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs font-extrabold text-slate-800 leading-snug">
+                  {highlightText}
+                </p>
+              )}
+            </div>
+
+          </div>
+        )}
 
         {/* RIGHT AREA: CALENDAR GRID */}
         <div className="flex-1 flex flex-col bg-white border border-slate-300 rounded-2xl overflow-hidden shadow-2xl">

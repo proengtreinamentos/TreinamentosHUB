@@ -195,15 +195,32 @@ export default function App() {
   const handleSyncAll = async () => {
     try {
       triggerToast('Sincronizando 100% dos dados com a nuvem...', 'info');
-      const res = await dbSyncAllToSupabase(instructors, locations, trainings);
-      if (isSupabaseConfigured) {
+
+      // Helper to merge lists keeping unique items by id
+      const mergeLists = <T extends { id: string }>(current: T[], seeds: T[]): T[] => {
+        const map = new Map<string, T>();
+        seeds.forEach((item) => map.set(item.id, item));
+        current.forEach((item) => map.set(item.id, item));
+        return Array.from(map.values());
+      };
+
+      const completeInstructors = mergeLists(instructors, INITIAL_INSTRUCTORS);
+      const completeLocations = mergeLists(locations, INITIAL_LOCATIONS);
+      const completeTrainings = mergeLists(trainings, INITIAL_TRAININGS);
+
+      setInstructors(completeInstructors);
+      setLocations(completeLocations);
+      setTrainings(completeTrainings);
+
+      const res = await dbSyncAllToSupabase(completeInstructors, completeLocations, completeTrainings);
+      if (getStorageMode() === 'supabase') {
         triggerToast(
           `Sincronização 100% concluída no Supabase! (${res.trainingsCount} treinamentos, ${res.instructorsCount} instrutores, ${res.locationsCount} locais)`,
           'success'
         );
       } else {
         triggerToast(
-          `Sincronização local efetuada! (${res.trainingsCount} treinamentos mantidos localmente)`,
+          `Sincronização local efetuada! (${res.trainingsCount} treinamentos mantidos no armazenamento local)`,
           'info'
         );
       }

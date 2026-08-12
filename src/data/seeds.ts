@@ -84,16 +84,23 @@ export const INITIAL_LOCATIONS: Location[] = [
   },
   {
     id: 'loc-5',
-    name: 'Auditório Principal',
+    name: 'P3 - 1º Andar',
     type: 'sala',
-    capacity: 100,
-    details: 'Térreo, ao lado da Recepção',
+    capacity: 30,
+    details: 'Prédio 3, 1º Andar',
   },
   {
     id: 'loc-6',
     name: 'Campo (Visita Técnica)',
     type: 'externo',
     details: 'Locais externos variáveis',
+  },
+  {
+    id: 'loc-7',
+    name: 'Auditório Principal',
+    type: 'sala',
+    capacity: 100,
+    details: 'Térreo, ao lado da Recepção',
   },
 ];
 
@@ -260,6 +267,56 @@ export const INITIAL_TRAININGS: Training[] = [
     endDate: '2026-07-22T16:00',
     status: 'confirmado',
     description: 'Capacitação CIPA e atendimento inicial de emergência.',
+  },
+  {
+    id: 't-16a',
+    title: 'NR 35',
+    instructorId: 'inst-6', // Thiago Anjos
+    locationId: 'loc-5', // P3 - 1º Andar
+    startDate: '2026-07-27T08:00',
+    endDate: '2026-07-27T12:00',
+    status: 'confirmado',
+    description: 'Treinamento de Segurança em Altura - NR 35.',
+  },
+  {
+    id: 't-16b',
+    title: 'Integração',
+    instructorId: 'inst-2', // Alexandre Rivellino
+    locationId: 'loc-5', // P3 - 1º Andar
+    startDate: '2026-07-28T08:00',
+    endDate: '2026-07-28T12:00',
+    status: 'confirmado',
+    description: 'Integração de novos colaboradores.',
+  },
+  {
+    id: 't-16c',
+    title: 'NR 10 - Segurança Elétrica',
+    instructorId: 'inst-1', // Admir Ventura
+    locationId: 'loc-5', // P3 - 1º Andar
+    startDate: '2026-07-29T08:00',
+    endDate: '2026-07-29T12:00',
+    status: 'confirmado',
+    description: 'Segurança em Instalações e Serviços em Eletricidade.',
+  },
+  {
+    id: 't-16d',
+    title: 'NR 20/23 - Brigada e Combate',
+    instructorId: 'inst-2', // Alexandre Rivellino
+    locationId: 'loc-5', // P3 - 1º Andar
+    startDate: '2026-07-30T08:00',
+    endDate: '2026-07-30T12:00',
+    status: 'confirmado',
+    description: 'Treinamento de líquidos inflamáveis e prevenção de incêndio.',
+  },
+  {
+    id: 't-16e',
+    title: 'NR 20/23 - Módulo Prático',
+    instructorId: 'inst-6', // Thiago Anjos
+    locationId: 'loc-5', // P3 - 1º Andar
+    startDate: '2026-07-31T08:00',
+    endDate: '2026-07-31T12:00',
+    status: 'confirmado',
+    description: 'Treinamento prático de combate a emergências.',
   },
 
   // --- AGOSTO 2026 (MÊS ATUAL) ---
