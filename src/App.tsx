@@ -151,7 +151,7 @@ export default function App() {
 
   // Confirmation modal state
   const [confirmDelete, setConfirmDelete] = useState<{
-    type: 'instructor' | 'location' | 'training';
+    type: 'instructor' | 'location' | 'training' | 'bulk_trainings';
     id: string;
     title: string;
     message: string;
@@ -296,16 +296,16 @@ export default function App() {
     setTrainings(updatedTrainings);
     localStorage.setItem('tr_trainings', JSON.stringify(updatedTrainings));
 
-    try {
-      // 1. Desvincular treinamentos primeiro no banco para evitar erro de FK (Foreign Key)
-      const affectedTrainings = trainings.filter((t) => t.instructorId === id);
-      for (const t of affectedTrainings) {
-        await dbSaveTraining({ ...t, instructorId: '' });
-      }
-      // 2. Só então excluir o instrutor
-      await dbDeleteInstructor(id);
-      triggerToast('Instrutor removido e treinamentos desvinculados.', 'info');
-    } catch (err) {
+    // 1. Desvincular treinamentos primeiro no banco para evitar erro de FK (Foreign Key)
+    const affectedTrainings = trainings.filter((t) => t.instructorId === id);
+    for (const t of affectedTrainings) {
+      await dbSaveTraining({ ...t, instructorId: '' });
+    }
+    // 2. Só então excluir o instrutor
+    const isDeletedOnSupabase = await dbDeleteInstructor(id);
+    if (isDeletedOnSupabase) {
+      triggerToast('Instrutor removido e treinamentos desvinculados no Supabase.', 'success');
+    } else {
       triggerToast('Sincronizado localmente. Erro ao excluir na nuvem.', 'info');
     }
   };
@@ -346,16 +346,16 @@ export default function App() {
     setTrainings(updatedTrainings);
     localStorage.setItem('tr_trainings', JSON.stringify(updatedTrainings));
 
-    try {
-      // 1. Desvincular treinamentos primeiro no banco para evitar erro de FK (Foreign Key)
-      const affectedTrainings = trainings.filter((t) => t.locationId === id);
-      for (const t of affectedTrainings) {
-        await dbSaveTraining({ ...t, locationId: '' });
-      }
-      // 2. Só então excluir o local
-      await dbDeleteLocation(id);
-      triggerToast('Local removido e treinamentos desvinculados.', 'info');
-    } catch (err) {
+    // 1. Desvincular treinamentos primeiro no banco para evitar erro de FK (Foreign Key)
+    const affectedTrainings = trainings.filter((t) => t.locationId === id);
+    for (const t of affectedTrainings) {
+      await dbSaveTraining({ ...t, locationId: '' });
+    }
+    // 2. Só então excluir o local
+    const isDeletedOnSupabase = await dbDeleteLocation(id);
+    if (isDeletedOnSupabase) {
+      triggerToast('Local removido e treinamentos desvinculados no Supabase.', 'success');
+    } else {
       triggerToast('Sincronizado localmente. Erro ao excluir na nuvem.', 'info');
     }
   };
@@ -392,10 +392,10 @@ export default function App() {
     setTrainings(updated);
     localStorage.setItem('tr_trainings', JSON.stringify(updated));
 
-    try {
-      await dbDeleteTraining(id);
-      triggerToast('Treinamento excluído com sucesso.', 'info');
-    } catch (err) {
+    const isDeletedOnSupabase = await dbDeleteTraining(id);
+    if (isDeletedOnSupabase) {
+      triggerToast('Treinamento excluído no Supabase com sucesso.', 'success');
+    } else {
       triggerToast('Sincronizado localmente. Erro ao excluir na nuvem.', 'info');
     }
   };
@@ -453,14 +453,19 @@ export default function App() {
     setTrainings(updated);
     localStorage.setItem('tr_trainings', JSON.stringify(updated));
 
-    try {
-      for (const tId of ids) {
-        const target = updated.find((t) => t.id === tId);
-        if (target) await dbSaveTraining(target);
+    let allSaved = true;
+    for (const tId of ids) {
+      const target = updated.find((t) => t.id === tId);
+      if (target) {
+        const ok = await dbSaveTraining(target);
+        if (!ok) allSaved = false;
       }
-      triggerToast(`Status de ${ids.length} treinamentos alterado com sucesso!`, 'success');
-    } catch (err) {
-      triggerToast('Status alterado localmente. Erro na nuvem.', 'info');
+    }
+    
+    if (allSaved) {
+      triggerToast(`Status de ${ids.length} treinamentos alterado com sucesso no Supabase!`, 'success');
+    } else {
+      triggerToast('Status alterado apenas localmente. Ocorreram erros na nuvem.', 'info');
     }
   };
 
@@ -482,13 +487,16 @@ export default function App() {
       setTrainings(updated);
       localStorage.setItem('tr_trainings', JSON.stringify(updated));
 
-      try {
-        for (const tId of ids) {
-          await dbDeleteTraining(tId);
-        }
-        triggerToast(`${ids.length} treinamentos excluídos com sucesso.`, 'info');
-      } catch (err) {
-        triggerToast('Sincronizado localmente. Erro ao excluir na nuvem.', 'info');
+      let allDeleted = true;
+      for (const tId of ids) {
+        const ok = await dbDeleteTraining(tId);
+        if (!ok) allDeleted = false;
+      }
+      
+      if (allDeleted) {
+        triggerToast(`${ids.length} treinamentos excluídos no Supabase com sucesso.`, 'success');
+      } else {
+        triggerToast('Sincronizado localmente. Ocorreram erros ao excluir na nuvem.', 'info');
       }
     }
   };
@@ -502,11 +510,11 @@ export default function App() {
     const updated = [...trainings, duplicated];
     setTrainings(updated);
 
-    try {
-      await dbSaveTraining(duplicated);
-      triggerToast(`Treinamento "${training.title}" duplicado com sucesso!`);
-    } catch (err) {
-      triggerToast('Sincronizado localmente. Erro ao duplicar na nuvem.', 'info');
+    const isSavedOnSupabase = await dbSaveTraining(duplicated);
+    if (isSavedOnSupabase) {
+      triggerToast(`Treinamento "${training.title}" duplicado no Supabase com sucesso!`, 'success');
+    } else {
+      triggerToast(`Treinamento "${training.title}" duplicado apenas localmente.`, 'info');
     }
   };
 
@@ -530,12 +538,12 @@ export default function App() {
     const updated = trainings.map((t) => t.id === trainingId ? updatedTraining : t);
     setTrainings(updated);
 
-    try {
-      await dbSaveTraining(updatedTraining);
-      const [y, m, d] = newDateStr.split('-');
-      triggerToast(`Treinamento "${training.title}" reagendado para ${d}/${m}/${y}!`, 'success');
-    } catch (err) {
-      triggerToast('Sincronizado localmente. Erro ao reagendar na nuvem.', 'info');
+    const isSavedOnSupabase = await dbSaveTraining(updatedTraining);
+    const [y, m, d] = newDateStr.split('-');
+    if (isSavedOnSupabase) {
+      triggerToast(`Treinamento "${training.title}" reagendado para ${d}/${m}/${y} no Supabase!`, 'success');
+    } else {
+      triggerToast(`Treinamento "${training.title}" reagendado apenas localmente.`, 'info');
     }
   };
 

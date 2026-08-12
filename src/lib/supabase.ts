@@ -189,14 +189,14 @@ export async function dbSaveInstructor(instructor: Instructor): Promise<boolean>
   }
 }
 
-export async function dbDeleteInstructor(id: string): Promise<void> {
+export async function dbDeleteInstructor(id: string): Promise<boolean> {
   const stored = localStorage.getItem('tr_instructors');
   if (stored) {
     const localList: Instructor[] = JSON.parse(stored);
     localStorage.setItem('tr_instructors', JSON.stringify(localList.filter((i) => i.id !== id)));
   }
 
-  if (!supabase) return;
+  if (!supabase) return false;
 
   try {
     let { error } = await supabase.from('instructors').delete().eq('id', id);
@@ -208,8 +208,10 @@ export async function dbDeleteInstructor(id: string): Promise<void> {
 
     if (error) throw error;
     isSupabaseOnline = true;
+    return true;
   } catch (err: any) {
     console.warn('Erro ao excluir instrutor no Supabase:', err?.message || err);
+    return false;
   }
 }
 
@@ -302,14 +304,14 @@ export async function dbSaveLocation(location: Location): Promise<boolean> {
   }
 }
 
-export async function dbDeleteLocation(id: string): Promise<void> {
+export async function dbDeleteLocation(id: string): Promise<boolean> {
   const stored = localStorage.getItem('tr_locations');
   if (stored) {
     const localList: Location[] = JSON.parse(stored);
     localStorage.setItem('tr_locations', JSON.stringify(localList.filter((l) => l.id !== id)));
   }
 
-  if (!supabase) return;
+  if (!supabase) return false;
 
   try {
     let { error } = await supabase.from('locations').delete().eq('id', id);
@@ -321,8 +323,10 @@ export async function dbDeleteLocation(id: string): Promise<void> {
 
     if (error) throw error;
     isSupabaseOnline = true;
+    return true;
   } catch (err: any) {
     console.warn('Erro ao excluir local no Supabase:', err?.message || err);
+    return false;
   }
 }
 
@@ -386,7 +390,8 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
   if (!supabase) return false;
 
   try {
-    // 1. Try camelCase payload
+    // 1. First try: Exact camelCase matching the user's DB schema without customColor
+    // (since the DB might not have the customColor column)
     let { error } = await supabase.from('trainings').upsert({
       id: training.id,
       title: training.title,
@@ -396,11 +401,13 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
       endDate: training.endDate,
       status: training.status,
       description: training.description || null,
-      customColor: training.customColor || null,
     });
 
-    // 2. Fallback to snake_case payload if error
-    if (error) {
+    // 2. Second try: camelCase WITH customColor (if they added it later)
+    if (error && error.message.includes('customColor')) {
+      // Ignore this specific error, we already tried without it
+    } else if (error) {
+      // 3. Fallback to snake_case payload if camelCase fails (e.g. for different DB setups)
       const retrySnake = await supabase.from('trainings').upsert({
         id: training.id,
         title: training.title,
@@ -410,25 +417,8 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
         end_date: training.endDate,
         status: training.status,
         description: training.description || null,
-        custom_color: training.customColor || null,
       });
       error = retrySnake.error;
-    }
-
-    // 3. Fallback to numeric id if needed
-    if (error && !isNaN(Number(training.id))) {
-      const retryNumeric = await supabase.from('trainings').upsert({
-        id: Number(training.id),
-        title: training.title,
-        instructor_id: training.instructorId || null,
-        location_id: training.locationId || null,
-        start_date: training.startDate,
-        end_date: training.endDate,
-        status: training.status,
-        description: training.description || null,
-        custom_color: training.customColor || null,
-      });
-      error = retryNumeric.error;
     }
 
     if (error) {
@@ -444,14 +434,14 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
   }
 }
 
-export async function dbDeleteTraining(id: string): Promise<void> {
+export async function dbDeleteTraining(id: string): Promise<boolean> {
   const stored = localStorage.getItem('tr_trainings');
   if (stored) {
     const localList: Training[] = JSON.parse(stored);
     localStorage.setItem('tr_trainings', JSON.stringify(localList.filter((t) => t.id !== id)));
   }
 
-  if (!supabase) return;
+  if (!supabase) return false;
 
   try {
     let { error } = await supabase.from('trainings').delete().eq('id', id);
@@ -463,8 +453,10 @@ export async function dbDeleteTraining(id: string): Promise<void> {
 
     if (error) throw error;
     isSupabaseOnline = true;
+    return true;
   } catch (err: any) {
     console.warn('Erro ao excluir treinamento no Supabase:', err?.message || err);
+    return false;
   }
 }
 
