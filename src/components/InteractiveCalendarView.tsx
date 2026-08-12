@@ -393,7 +393,7 @@ export default function InteractiveCalendarView({
                 onClick={handleManualSync}
                 disabled={isSyncing}
                 className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-black px-3 py-2 rounded-lg shadow-md transition-all cursor-pointer uppercase tracking-wider disabled:opacity-50"
-                title="Sincronizar dados entre ambiente de teste e produção no Supabase"
+                title="Baixar dados mais recentes do Supabase (Pull)"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>

@@ -11,7 +11,10 @@ import {
   INITIAL_TRAININGS 
 } from './data/seeds';
 import { formatDateString } from './utils/dateUtils';
+import Dashboard from './components/Dashboard';
+import Reports from './components/Reports';
 import {
+  supabase,
   isSupabaseConfigured,
   getStorageMode,
   dbGetInstructors,
@@ -159,7 +162,7 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // 1. Fetch data logic (Extracted for manual sync)
-  const loadAllData = async (isManualSync = false) => {
+  const loadAllData = async (isManualSync = false, showToast = true) => {
     try {
       const dbInstructors = await dbGetInstructors(INITIAL_INSTRUCTORS);
       
@@ -200,17 +203,17 @@ export default function App() {
       setTrainings(dbTrainings);
       
       if (getStorageMode() === 'supabase') {
-        if (!isManualSync) {
+        if (!isManualSync && showToast) {
           triggerToast('Conectado ao banco de dados Supabase com sucesso!', 'success');
-        } else {
-          triggerToast('Sincronização 100% concluída: Dados atualizados do Supabase.', 'success');
+        } else if (showToast) {
+          triggerToast('Sincronização 100% concluída: Dados atualizados.', 'success');
         }
-      } else if (isManualSync) {
+      } else if (isManualSync && showToast) {
         triggerToast('Sincronização local efetuada!', 'info');
       }
     } catch (err) {
       console.warn('Erro ou indisponibilidade ao carregar dados remotos:', err);
-      triggerToast('Dados carregados no modo de armazenamento local.', 'info');
+      if (showToast) triggerToast('Dados carregados no modo de armazenamento local.', 'info');
     } finally {
       setIsDataLoaded(true);
     }
@@ -219,6 +222,27 @@ export default function App() {
   // Initial Load from Supabase (with LocalStorage fallback) or Seeds
   useEffect(() => {
     loadAllData();
+  }, []);
+
+  // Real-time synchronization with Supabase
+  useEffect(() => {
+    if (!supabase || !isSupabaseConfigured) return;
+
+    // Subscribe to all changes in the public schema
+    const channel = supabase.channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        (payload) => {
+          // Softly reload data without displaying toast notification to prevent spamming
+          loadAllData(true, false);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Toast system
@@ -294,7 +318,7 @@ export default function App() {
     if (isSavedOnSupabase) {
       triggerToast(`Instrutor "${data.name}" salvo no Supabase com sucesso!`, 'success');
     } else {
-      triggerToast(`Instrutor "${data.name}" salvo localmente. Clique em "Sincronizar com Nuvem" para enviar ao banco.`, 'info');
+      triggerToast(`Instrutor "${data.name}" salvo apenas localmente. O Supabase está offline ou indisponível.`, 'info');
     }
   };
 
@@ -344,7 +368,7 @@ export default function App() {
     if (isSavedOnSupabase) {
       triggerToast(`Local "${data.name}" salvo no Supabase com sucesso!`, 'success');
     } else {
-      triggerToast(`Local "${data.name}" salvo localmente. Clique em "Sincronizar com Nuvem" para enviar ao banco.`, 'info');
+      triggerToast(`Local "${data.name}" salvo apenas localmente. O Supabase está offline ou indisponível.`, 'info');
     }
   };
 
@@ -394,7 +418,7 @@ export default function App() {
     if (isSavedOnSupabase) {
       triggerToast(`Treinamento "${data.title}" salvo no Supabase com sucesso!`, 'success');
     } else {
-      triggerToast(`Treinamento "${data.title}" salvo localmente. Clique em "Sincronizar com Nuvem" para enviar ao banco.`, 'info');
+      triggerToast(`Treinamento "${data.title}" salvo apenas localmente. O Supabase está offline ou indisponível.`, 'info');
     }
   };
 
@@ -635,7 +659,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
         {/* Mobile Top Header with Hamburger Menu Toggle */}
-        <header className="md:hidden sticky top-0 z-30 bg-[#001130] text-white px-4 py-3 shadow-md flex items-center justify-between border-b border-slate-800">
+        <header className="md:hidden sticky top-0 z-30 bg-[#001130] text-white px-4 py-3 shadow-md flex items-center justify-between border-b border-slate-800 print:hidden">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileNavOpen(true)}
@@ -727,6 +751,21 @@ export default function App() {
             onDeleteTraining={handleDeleteTrainingTrigger}
             onBulkDeleteTrainings={handleBulkDeleteTrainings}
             onBulkUpdateStatusTrainings={handleBulkUpdateStatusTrainings}
+          />
+        )}
+        {activeTab === 'dashboard' && (
+          <Dashboard
+            trainings={trainings}
+            instructors={instructors}
+            locations={locations}
+          />
+        )}
+
+        {activeTab === 'relatorios' && (
+          <Reports
+            trainings={trainings}
+            instructors={instructors}
+            locations={locations}
           />
         )}
       </main>

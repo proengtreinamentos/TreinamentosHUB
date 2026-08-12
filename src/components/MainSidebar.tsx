@@ -9,10 +9,12 @@ import {
   ShieldCheck,
   RefreshCw,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  LayoutDashboard,
+  FileText
 } from 'lucide-react';
 
-export type TabType = 'interativo' | 'treinamentos' | 'instrutores' | 'locais';
+export type TabType = 'interativo' | 'treinamentos' | 'instrutores' | 'locais' | 'dashboard' | 'relatorios';
 
 interface MainSidebarProps {
   activeTab: TabType;
@@ -49,6 +51,11 @@ export default function MainSidebar({
 
   const navItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }>; badge?: string }[] = [
     {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+    },
+    {
       id: 'interativo',
       label: 'Calendário Interativo',
       icon: Sparkles,
@@ -67,6 +74,11 @@ export default function MainSidebar({
       id: 'locais',
       label: 'Locais de Treinamento',
       icon: MapPin,
+    },
+    {
+      id: 'relatorios',
+      label: 'Relatórios',
+      icon: FileText,
     },
   ];
 
@@ -87,7 +99,7 @@ export default function MainSidebar({
 
       {/* Main Left Sidebar */}
       <aside
-        className={`fixed md:static top-0 left-0 bottom-0 z-50 bg-[#001130] text-slate-100 flex flex-col border-r border-slate-800 shadow-2xl transition-all duration-300 ease-in-out ${
+        className={`print:hidden fixed md:static top-0 left-0 bottom-0 z-50 bg-[#001130] text-slate-100 flex flex-col border-r border-slate-800 shadow-2xl transition-all duration-300 ease-in-out ${
           isMobileOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'
         } ${isCollapsed ? 'md:w-20' : 'md:w-72'}`}
       >
@@ -246,7 +258,7 @@ export default function MainSidebar({
                   onClick={handleManualSync}
                   disabled={isSyncing}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-800/80 hover:bg-blue-600 active:bg-blue-700 text-slate-200 hover:text-white rounded-xl text-xs font-black transition-all cursor-pointer border border-slate-700 hover:border-blue-500 shadow-xs disabled:opacity-50"
-                  title="Sincronizar todos os treinamentos, instrutores e locais com o Supabase"
+                  title="Baixar dados mais recentes do Supabase (Substitui dados locais)"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin text-blue-400' : 'text-slate-400'}`} />
                   <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar com Nuvem'}</span>
@@ -275,7 +287,7 @@ export default function MainSidebar({
                   onClick={handleManualSync}
                   disabled={isSyncing}
                   className="p-2 rounded-xl bg-slate-800/80 hover:bg-blue-600 text-slate-200 hover:text-white transition-colors cursor-pointer border border-slate-700 disabled:opacity-50"
-                  title="Sincronizar com a Nuvem"
+                  title="Baixar dados da Nuvem (Pull)"
                 >
                   <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin text-blue-400' : 'text-slate-300'}`} />
                 </button>
