@@ -102,7 +102,7 @@ export async function dbGetInstructors(fallbackData: Instructor[]): Promise<Inst
     if (stored !== null) {
       try {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch {
         // Fallback
       }
@@ -128,31 +128,10 @@ export async function dbGetInstructors(fallbackData: Instructor[]): Promise<Inst
     isSupabaseOnline = true;
     const remoteList = (data || []).map(normalizeInstructorRow);
 
-    // Merge: combine remote list with any local instructor created offline/locally
-    const mergedMap = new Map<string, Instructor>();
-    // First insert all remote items
-    remoteList.forEach((inst) => mergedMap.set(inst.id, inst));
+    // Supabase is the source of truth, overwrite local storage with remote data
+    localStorage.setItem('tr_instructors', JSON.stringify(remoteList));
 
-    // Then check if local has items missing in remote
-    const missingInRemote: Instructor[] = [];
-    localList.forEach((inst) => {
-      if (!mergedMap.has(inst.id)) {
-        mergedMap.set(inst.id, inst);
-        missingInRemote.push(inst);
-      }
-    });
-
-    const mergedList = Array.from(mergedMap.values());
-    localStorage.setItem('tr_instructors', JSON.stringify(mergedList));
-
-    // Push local missing items to Supabase asynchronously
-    if (missingInRemote.length > 0) {
-      for (const inst of missingInRemote) {
-        await dbSaveInstructor(inst);
-      }
-    }
-
-    return mergedList;
+    return remoteList;
   } catch (err: any) {
     console.warn('Serviço Supabase indisponível para instrutores. Utilizando LocalStorage:', err?.message || err);
     return localList;
@@ -241,7 +220,7 @@ export async function dbGetLocations(fallbackData: Location[]): Promise<Location
     if (stored !== null) {
       try {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch {
         // Fallback
       }
@@ -267,27 +246,10 @@ export async function dbGetLocations(fallbackData: Location[]): Promise<Location
     isSupabaseOnline = true;
     const remoteList = (data || []).map(normalizeLocationRow);
 
-    const mergedMap = new Map<string, Location>();
-    remoteList.forEach((loc) => mergedMap.set(loc.id, loc));
+    // Supabase is the source of truth
+    localStorage.setItem('tr_locations', JSON.stringify(remoteList));
 
-    const missingInRemote: Location[] = [];
-    localList.forEach((loc) => {
-      if (!mergedMap.has(loc.id)) {
-        mergedMap.set(loc.id, loc);
-        missingInRemote.push(loc);
-      }
-    });
-
-    const mergedList = Array.from(mergedMap.values());
-    localStorage.setItem('tr_locations', JSON.stringify(mergedList));
-
-    if (missingInRemote.length > 0) {
-      for (const loc of missingInRemote) {
-        await dbSaveLocation(loc);
-      }
-    }
-
-    return mergedList;
+    return remoteList;
   } catch (err: any) {
     console.warn('Serviço Supabase indisponível para locais. Utilizando LocalStorage:', err?.message || err);
     return localList;
@@ -371,7 +333,7 @@ export async function dbGetTrainings(fallbackData: Training[]): Promise<Training
     if (stored !== null) {
       try {
         const parsed: Training[] = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
         }
       } catch {
@@ -396,31 +358,14 @@ export async function dbGetTrainings(fallbackData: Training[]): Promise<Training
     isSupabaseOnline = true;
     const remoteList = (data || []).map(normalizeTrainingRow);
 
-    const mergedMap = new Map<string, Training>();
-    remoteList.forEach((tr) => mergedMap.set(tr.id, tr));
-
-    const missingInRemote: Training[] = [];
-    localList.forEach((tr) => {
-      if (!mergedMap.has(tr.id)) {
-        mergedMap.set(tr.id, tr);
-        missingInRemote.push(tr);
-      }
-    });
-
-    const mergedList = Array.from(mergedMap.values()).sort(
+    const sortedList = remoteList.sort(
       (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
     );
 
-    localStorage.setItem('tr_trainings', JSON.stringify(mergedList));
+    // Supabase is the source of truth
+    localStorage.setItem('tr_trainings', JSON.stringify(sortedList));
 
-    // Upload local missing trainings to Supabase asynchronously
-    if (missingInRemote.length > 0) {
-      for (const tr of missingInRemote) {
-        await dbSaveTraining(tr);
-      }
-    }
-
-    return mergedList;
+    return sortedList;
   } catch (err: any) {
     console.warn('Serviço Supabase indisponível para treinamentos. Utilizando LocalStorage:', err?.message || err);
     return localList;

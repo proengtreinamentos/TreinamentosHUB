@@ -44,16 +44,17 @@ export default function LocationsManagement({
   };
 
   // Filter locations by search
+  const deferredSearch = React.useDeferredValue(search);
   const filteredLocations = useMemo(() => {
-    if (!search.trim()) return locations;
-    const q = search.toLowerCase();
+    if (!deferredSearch.trim()) return locations;
+    const q = deferredSearch.toLowerCase();
     return locations.filter(
       (loc) =>
         loc.name.toLowerCase().includes(q) ||
         (loc.details || '').toLowerCase().includes(q) ||
         loc.type.toLowerCase().includes(q)
     );
-  }, [locations, search]);
+  }, [locations, deferredSearch]);
 
   const externalCount = useMemo(() => {
     return locations.filter((l) => l.type === 'externo').length;

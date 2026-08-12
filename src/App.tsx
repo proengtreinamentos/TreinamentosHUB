@@ -158,59 +158,66 @@ export default function App() {
   // Notifications
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  // 1. Initial Load from Supabase (with LocalStorage fallback) or Seeds
-  useEffect(() => {
-    const loadAllData = async () => {
-      try {
-        const dbInstructors = await dbGetInstructors(INITIAL_INSTRUCTORS);
-        
-        // Map exact colors from image by instructor name
-        const imageColorsMap: Record<string, string> = {
-          'admir ventura': '#f24e1e',
-          'alexandre rivellino': '#0b41cd',
-          'jaqueline daiane': '#008b8b',
-          'leandro manha': '#6b21a8',
-          'naiara cristina': '#e5a000',
-          'thiago anjos': '#18181b',
-        };
+  // 1. Fetch data logic (Extracted for manual sync)
+  const loadAllData = async (isManualSync = false) => {
+    try {
+      const dbInstructors = await dbGetInstructors(INITIAL_INSTRUCTORS);
+      
+      // Map exact colors from image by instructor name
+      const imageColorsMap: Record<string, string> = {
+        'admir ventura': '#f24e1e',
+        'alexandre rivellino': '#0b41cd',
+        'jaqueline daiane': '#008b8b',
+        'leandro manha': '#6b21a8',
+        'naiara cristina': '#e5a000',
+        'thiago anjos': '#18181b',
+      };
 
-        const rawFiltered = dbInstructors
-          .map((inst) => {
-            const matched = imageColorsMap[inst.name.trim().toLowerCase()];
-            return matched ? { ...inst, color: matched } : inst;
-          });
-
-        // Deduplicate strictly by normalized instructor name
-        const uniqueNameMap = new Map<string, Instructor>();
-        rawFiltered.forEach((inst) => {
-          const normName = inst.name.trim().toLowerCase();
-          if (!uniqueNameMap.has(normName)) {
-            uniqueNameMap.set(normName, inst);
-          }
+      const rawFiltered = dbInstructors
+        .map((inst) => {
+          const matched = imageColorsMap[inst.name.trim().toLowerCase()];
+          return matched ? { ...inst, color: matched } : inst;
         });
 
-        const updatedInstructors = Array.from(uniqueNameMap.values());
-
-        setInstructors(updatedInstructors);
-        localStorage.setItem('tr_instructors', JSON.stringify(updatedInstructors));
-
-        const dbLocations = await dbGetLocations(INITIAL_LOCATIONS);
-        setLocations(dbLocations);
-
-        const dbTrainings = await dbGetTrainings(INITIAL_TRAININGS);
-        setTrainings(dbTrainings);
-        
-        if (getStorageMode() === 'supabase') {
-          triggerToast('Conectado ao banco de dados Supabase com sucesso!', 'success');
+      // Deduplicate strictly by normalized instructor name
+      const uniqueNameMap = new Map<string, Instructor>();
+      rawFiltered.forEach((inst) => {
+        const normName = inst.name.trim().toLowerCase();
+        if (!uniqueNameMap.has(normName)) {
+          uniqueNameMap.set(normName, inst);
         }
-      } catch (err) {
-        console.warn('Erro ou indisponibilidade ao carregar dados remotos:', err);
-        triggerToast('Dados carregados no modo de armazenamento local.', 'info');
-      } finally {
-        setIsDataLoaded(true);
-      }
-    };
+      });
 
+      const updatedInstructors = Array.from(uniqueNameMap.values());
+
+      setInstructors(updatedInstructors);
+      localStorage.setItem('tr_instructors', JSON.stringify(updatedInstructors));
+
+      const dbLocations = await dbGetLocations(INITIAL_LOCATIONS);
+      setLocations(dbLocations);
+
+      const dbTrainings = await dbGetTrainings(INITIAL_TRAININGS);
+      setTrainings(dbTrainings);
+      
+      if (getStorageMode() === 'supabase') {
+        if (!isManualSync) {
+          triggerToast('Conectado ao banco de dados Supabase com sucesso!', 'success');
+        } else {
+          triggerToast('Sincronização 100% concluída: Dados atualizados do Supabase.', 'success');
+        }
+      } else if (isManualSync) {
+        triggerToast('Sincronização local efetuada!', 'info');
+      }
+    } catch (err) {
+      console.warn('Erro ou indisponibilidade ao carregar dados remotos:', err);
+      triggerToast('Dados carregados no modo de armazenamento local.', 'info');
+    } finally {
+      setIsDataLoaded(true);
+    }
+  };
+
+  // Initial Load from Supabase (with LocalStorage fallback) or Seeds
+  useEffect(() => {
     loadAllData();
   }, []);
 
@@ -225,25 +232,8 @@ export default function App() {
 
   // Full database sync function
   const handleSyncAll = async () => {
-    try {
-      triggerToast('Sincronizando 100% dos dados com a nuvem...', 'info');
-
-      const res = await dbSyncAllToSupabase(instructors, locations, trainings);
-      if (getStorageMode() === 'supabase') {
-        triggerToast(
-          `Sincronização 100% concluída no Supabase! (${res.trainingsCount} treinamentos, ${res.instructorsCount} instrutores, ${res.locationsCount} locais)`,
-          'success'
-        );
-      } else {
-        triggerToast(
-          `Sincronização local efetuada! (${res.trainingsCount} treinamentos mantidos no armazenamento local)`,
-          'info'
-        );
-      }
-    } catch (err) {
-      console.error('Erro na sincronização:', err);
-      triggerToast('Erro durante a sincronização com o banco.', 'error');
-    }
+    triggerToast('Baixando dados mais recentes da nuvem...', 'info');
+    await loadAllData(true);
   };
 
   // Reset demo data
@@ -606,8 +596,9 @@ export default function App() {
   // ----------------------------------------------------
   // COMPUTE FILTERED EVENTS FOR THE CALENDAR VIEWS
   // ----------------------------------------------------
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
   const filteredEventsForCalendar = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const query = deferredSearchQuery.trim().toLowerCase();
     return trainings.filter((t) => {
       // 1. Filter by search query
       const matchesSearch = !query || t.title.toLowerCase().includes(query) || (t.description && t.description.toLowerCase().includes(query));
@@ -623,7 +614,7 @@ export default function App() {
 
       return matchesSearch && matchesStatus && matchesInstructor && matchesLocation;
     });
-  }, [trainings, searchQuery, selectedStatuses, selectedInstructorIds, selectedLocationIds]);
+  }, [trainings, deferredSearchQuery, selectedStatuses, selectedInstructorIds, selectedLocationIds]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-800 antialiased selection:bg-blue-100">

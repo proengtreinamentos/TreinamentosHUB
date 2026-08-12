@@ -44,9 +44,10 @@ export default function InstructorsManagement({
   };
 
   // Filter instructors by search
+  const deferredSearch = React.useDeferredValue(search);
   const filteredInstructors = useMemo(() => {
-    if (!search.trim()) return instructors;
-    const q = search.toLowerCase();
+    if (!deferredSearch.trim()) return instructors;
+    const q = deferredSearch.toLowerCase();
     return instructors.filter(
       (inst) =>
         inst.name.toLowerCase().includes(q) ||
@@ -54,7 +55,7 @@ export default function InstructorsManagement({
         (inst.email || '').toLowerCase().includes(q) ||
         (inst.phone || '').includes(q)
     );
-  }, [instructors, search]);
+  }, [instructors, deferredSearch]);
 
   const totalSpecialties = useMemo(() => {
     return new Set(instructors.map((i) => i.specialty.trim())).size;

@@ -67,11 +67,12 @@ export default function TrainingsManagement({
   const locationsMap = useMemo(() => new Map(locations.map((l) => [l.id, l])), [locations]);
 
   // Handle filtering
+  const deferredSearch = React.useDeferredValue(search);
   const filteredTrainings = useMemo(() => {
     const list = trainings.filter((t) => {
       const matchesSearch = 
-        t.title.toLowerCase().includes(search.toLowerCase()) || 
-        (t.description || '').toLowerCase().includes(search.toLowerCase());
+        t.title.toLowerCase().includes(deferredSearch.toLowerCase()) || 
+        (t.description || '').toLowerCase().includes(deferredSearch.toLowerCase());
       const matchesInstructor = !instFilter || t.instructorId === instFilter;
       const matchesLocation = !locFilter || t.locationId === locFilter;
       const matchesStatus = !statusFilter || t.status === statusFilter;
@@ -85,7 +86,7 @@ export default function TrainingsManagement({
     });
 
     return list;
-  }, [trainings, search, instFilter, locFilter, statusFilter, sortBy]);
+  }, [trainings, deferredSearch, instFilter, locFilter, statusFilter, sortBy]);
 
   // Calculate quick stats
   const stats = useMemo(() => {
