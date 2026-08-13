@@ -106,41 +106,9 @@ export default function InteractiveCalendarView({
   const instructorsMap = useMemo(() => new Map<string, Instructor>(instructors.map((i) => [i.id, i])), [instructors]);
   const locationsMap = useMemo(() => new Map<string, Location>(locations.map((l) => [l.id, l])), [locations]);
 
-  // Month holidays for sidebar notice
-  const currentMonthHolidays = (Array.from(yearHolidays.values()) as Array<{ dateStr: string; name: string }>).filter((h) => {
-    const [hY, hM] = h.dateStr.split('-').map(Number);
-    return hY === year && hM === month + 1;
-  });
-
-  // Calculate active instructor normalized names and IDs in the current visible grid / calendar month
-  const gridDateSet = new Set(gridDays.map((d) => formatDateString(d.date)));
-  const activeInstructorKeys = new Set<string>();
-
-  trainings.forEach((t) => {
-    const [tDateStr] = t.startDate.split('T');
-    if (gridDateSet.has(tDateStr) && t.instructorId) {
-      activeInstructorKeys.add(t.instructorId.toLowerCase());
-      const instObj = instructors.find((i) => i.id === t.instructorId);
-      if (instObj) {
-        activeInstructorKeys.add(instObj.name.trim().toLowerCase());
-      }
-    }
-  });
-
-  // Filter instructors for sidebar and strictly deduplicate by normalized name
-  const sidebarMap = new Map<string, Instructor>();
-  instructors.forEach((inst) => {
-    const normName = inst.name.trim().toLowerCase();
-    const isMatch = activeInstructorKeys.has(inst.id.toLowerCase()) || activeInstructorKeys.has(normName);
-    if (isMatch && !sidebarMap.has(normName)) {
-      sidebarMap.set(normName, inst);
-    }
-  });
-
-  const calendarSidebarInstructors = Array.from(sidebarMap.values());
-
   // Filter state by selected instructor on left panel (null = show all)
   const [selectedInstructorFilter, setSelectedInstructorFilter] = useState<string | null>(null);
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState<string | null>(null);
 
   // Monthly statistics for current viewed month
   const monthTrainings = trainings.filter((t) => {
@@ -165,14 +133,6 @@ export default function InteractiveCalendarView({
   const completionPercent = totalMonthTrainings > 0
     ? Math.round((realizadosCount / totalMonthTrainings) * 100)
     : 0;
-
-  // Highlight notice box on left panel (keyed by year-month)
-  const [monthlyHighlights, setMonthlyHighlights] = useState<Record<string, string>>({});
-  const yearMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-  const customHighlight = monthlyHighlights[yearMonthKey];
-  const hasCustomHighlight = Boolean(customHighlight && customHighlight.trim().length > 0);
-  const currentHighlightText = customHighlight ?? '';
-  const [isEditingHighlight, setIsEditingHighlight] = useState(false);
 
   // Quick Add / Edit Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -293,13 +253,18 @@ export default function InteractiveCalendarView({
         }
       }
 
+      // Apply location filter if active
+      if (selectedLocationFilter && t.locationId !== selectedLocationFilter) {
+        return;
+      }
+
       if (!map.has(dateKey)) {
         map.set(dateKey, []);
       }
       map.get(dateKey)!.push(t);
     });
     return map;
-  }, [trainings, selectedInstructorFilter, instructors, instructorsMap]);
+  }, [trainings, selectedInstructorFilter, selectedLocationFilter, instructors, instructorsMap]);
 
   const monthNameUpper = MONTHS_PT[month].toUpperCase();
 
@@ -442,32 +407,30 @@ export default function InteractiveCalendarView({
         
         {/* LEFT PANEL: INSTRUTORES + ESTATÍSTICAS + DESTAQUE (Hidden in Fullscreen Mode) */}
         {!isFullscreen && (
-          <div className="w-full md:w-60 lg:w-64 flex flex-col gap-3.5 flex-shrink-0">
+          <div className="w-full md:w-60 lg:w-64 flex flex-col gap-3.5 flex-shrink-0 overflow-y-auto pb-2">
             
-            {/* 1. INSTRUTORES Section Header */}
-            <div className="bg-[#001130] border border-slate-700 rounded-xl p-2.5 shadow-md flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1 rounded-md bg-blue-600 text-white">
-                  <Users className="h-4 w-4 stroke-[2.5]" />
+            {/* 1. INSTRUTORES Card */}
+            <div className="bg-white rounded-2xl flex flex-col shadow-xl border border-slate-200/90 overflow-hidden">
+              <div className="bg-[#001130] p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="text-blue-500">
+                    <Users className="h-4 w-4 stroke-[2.5]" />
+                  </div>
+                  <h3 className="text-xs font-black tracking-widest uppercase text-white">
+                    Instrutores
+                  </h3>
                 </div>
-                <h3 className="text-xs font-black tracking-widest uppercase text-white">
-                  Instrutores
-                </h3>
+                {selectedInstructorFilter && (
+                  <button
+                    onClick={() => setSelectedInstructorFilter(null)}
+                    className="text-[10px] font-bold text-red-400 hover:text-red-300 underline"
+                  >
+                    Limpar
+                  </button>
+                )}
               </div>
-              {selectedInstructorFilter && (
-                <button
-                  onClick={() => setSelectedInstructorFilter(null)}
-                  className="text-[10px] font-bold text-red-400 hover:text-red-300 underline"
-                >
-                  Limpar
-                </button>
-              )}
-            </div>
-
-            {/* Instructor Cards List (Only instructors with scheduled trainings in current calendar view) */}
-            <div className="flex flex-col gap-1.5">
-              {calendarSidebarInstructors.length > 0 ? (
-                calendarSidebarInstructors.map((inst) => {
+              <div className="flex flex-col p-2 gap-1 max-h-60 overflow-y-auto ">
+                {instructors.map((inst) => {
                   const isSelected = selectedInstructorFilter === inst.id;
                   const avatarBg = inst.color || '#ea580c';
 
@@ -475,7 +438,7 @@ export default function InteractiveCalendarView({
                     <button
                       key={inst.id}
                       onClick={() => setSelectedInstructorFilter(isSelected ? null : inst.id)}
-                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer shadow-sm ${
+                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-blue-50 ring-2 ring-blue-600 text-slate-900'
                           : 'bg-white hover:bg-slate-100 text-slate-800'
@@ -494,16 +457,62 @@ export default function InteractiveCalendarView({
                       </div>
                     </button>
                   );
-                })
-              ) : (
-                <div className="p-2.5 bg-white/10 rounded-xl text-center text-xs text-slate-300 font-medium border border-slate-700/50">
-                  Nenhum instrutor neste mês
-                </div>
-              )}
+                })}
+              </div>
             </div>
 
-            {/* 2. ESTATÍSTICAS DO MÊS Card (Redesigned matching system visual identity) */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 text-slate-900 shadow-md flex flex-col gap-2.5">
+            {/* 2. LOCAIS Card */}
+            <div className="bg-white rounded-2xl flex flex-col shadow-xl border border-slate-200/90 overflow-hidden">
+              <div className="bg-[#001130] p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="text-blue-500">
+                    <MapPin className="h-4 w-4 stroke-[2.5]" />
+                  </div>
+                  <h3 className="text-xs font-black tracking-widest uppercase text-white">
+                    Locais
+                  </h3>
+                </div>
+                {selectedLocationFilter && (
+                  <button
+                    onClick={() => setSelectedLocationFilter(null)}
+                    className="text-[10px] font-bold text-red-400 hover:text-red-300 underline"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col p-2 gap-1 max-h-60 overflow-y-auto ">
+                {locations.map((loc) => {
+                  const isSelected = selectedLocationFilter === loc.id;
+                  
+                  return (
+                    <button
+                      key={loc.id}
+                      onClick={() => setSelectedLocationFilter(isSelected ? null : loc.id)}
+                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-50 ring-2 ring-blue-600 text-slate-900'
+                          : 'bg-white hover:bg-slate-100 text-slate-800'
+                      }`}
+                    >
+                      <div 
+                        className="h-7 w-7 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-xs flex-shrink-0 bg-slate-600"
+                      >
+                        <MapPin className="h-3.5 w-3.5 stroke-[2.5]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black text-slate-900 truncate leading-tight" title={loc.name}>
+                          {loc.name}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. ESTATÍSTICAS DO MÊS Card (Redesigned matching system visual identity) */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 text-slate-900 shadow-md flex flex-col gap-2.5 mt-auto">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-xs">
@@ -573,72 +582,6 @@ export default function InteractiveCalendarView({
                     />
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* 3. DESTAQUE & FERIADOS Card */}
-            <div className="bg-white rounded-2xl p-3.5 border-2 border-red-500/80 text-slate-900 shadow-xl relative group mt-auto flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-full bg-red-600 text-white shadow-xs">
-                    <CalendarIcon className="h-4 w-4 stroke-[2.5]" />
-                  </div>
-                  <span className="text-xs font-black tracking-wider text-red-600 uppercase">
-                    Feriados & Destaques
-                  </span>
-                </div>
-                <button
-                  onClick={() => setIsEditingHighlight(!isEditingHighlight)}
-                  className="text-slate-400 hover:text-slate-700 p-1 rounded transition-colors cursor-pointer"
-                  title="Editar destaque do mês"
-                >
-                  <Edit3 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              {isEditingHighlight ? (
-                <div className="flex flex-col gap-2">
-                  <textarea
-                    value={currentHighlightText}
-                    onChange={(e) => setMonthlyHighlights((prev) => ({ ...prev, [yearMonthKey]: e.target.value }))}
-                    className="text-xs border border-slate-300 rounded-md p-2 w-full resize-none text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500"
-                    rows={2}
-                    placeholder={`Destaque personalizado para ${MONTHS_PT[month]}...`}
-                  />
-                  <button
-                    onClick={() => setIsEditingHighlight(false)}
-                    className="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-md hover:bg-red-700 transition-colors self-end cursor-pointer"
-                  >
-                    Salvar
-                  </button>
-                </div>
-              ) : (
-                <>
-                  {hasCustomHighlight ? (
-                    <p className="text-xs font-extrabold text-slate-800 leading-snug">
-                      {currentHighlightText}
-                    </p>
-                  ) : currentMonthHolidays.length > 0 ? (
-                    <div className="bg-red-50/90 border border-red-200 rounded-xl p-2.5 flex flex-col gap-1">
-                      <span className="text-[10px] font-black uppercase text-red-700 tracking-wider">
-                        Feriados em {MONTHS_PT[month]}:
-                      </span>
-                      {currentMonthHolidays.map((h) => {
-                        const [, , hD] = h.dateStr.split('-');
-                        return (
-                          <div key={h.dateStr} className="flex items-start gap-1 text-xs text-slate-800">
-                            <span className="font-black text-red-600">{hD}/{String(month + 1).padStart(2, '0')}:</span>
-                            <span className="font-extrabold truncate" title={h.name}>{h.name}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-center text-xs font-bold text-slate-600">
-                      Sem feriados cadastrados em {MONTHS_PT[month]}
-                    </div>
-                  )}
-                </>
               )}
             </div>
 
