@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Training, Instructor, Location } from '../types';
-import { generateMonthGrid, MONTHS_PT, formatDateString, formatTimeString } from '../utils/dateUtils';
+import { generateMonthGrid, getDaysInWeek, MONTHS_PT, formatDateString, formatTimeString } from '../utils/dateUtils';
 import { getHolidayForDate, getHolidaysForYear } from '../utils/holidays';
 import { 
   Users, 
@@ -37,6 +37,8 @@ interface InteractiveCalendarViewProps {
   onDeleteTraining: (id: string) => void;
   onSaveInstructor?: (instructor: Omit<Instructor, 'id'> & { id?: string }) => void;
   onSyncRequested?: () => Promise<void>;
+  viewMode?: 'month' | 'week';
+  onViewModeChange?: (mode: 'month' | 'week') => void;
 }
 
 // Preset color swatches matching the exact image palette
@@ -60,9 +62,12 @@ export default function InteractiveCalendarView({
   onSaveTraining,
   onDeleteTraining,
   onSyncRequested,
+  viewMode = 'month',
+  onViewModeChange,
 }: InteractiveCalendarViewProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Removed local viewMode state
   const calendarContainerRef = useRef<HTMLDivElement>(null);
 
   const toggleFullscreen = () => {
@@ -100,7 +105,17 @@ export default function InteractiveCalendarView({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const gridDays = useMemo(() => generateMonthGrid(year, month), [year, month]);
+  const gridDays = useMemo(() => {
+    if (viewMode === 'week') {
+      const days = getDaysInWeek(currentDate);
+      return days.map((d) => ({
+        date: d,
+        isCurrentMonth: d.getMonth() === month,
+        key: `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`,
+      }));
+    }
+    return generateMonthGrid(year, month);
+  }, [year, month, currentDate, viewMode]);
   const yearHolidays = useMemo(() => getHolidaysForYear(year), [year]);
 
   const instructorsMap = useMemo(() => new Map<string, Instructor>(instructors.map((i) => [i.id, i])), [instructors]);
@@ -347,10 +362,34 @@ export default function InteractiveCalendarView({
             <button
               onClick={() => onNavigate('next')}
               className="p-2 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
-              title="Próximo Mês"
+              title="Próximo"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
+            
+            {/* View Mode Toggle */}
+            <div className="flex bg-[#11284d] rounded-lg p-1 ml-2">
+              <button
+                onClick={() => onViewModeChange && onViewModeChange('month')}
+                className={`px-3 py-1 rounded text-xs font-bold uppercase transition-colors cursor-pointer ${
+                  viewMode === 'month' 
+                    ? 'bg-blue-600 text-white shadow-sm' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Mês
+              </button>
+              <button
+                onClick={() => onViewModeChange && onViewModeChange('week')}
+                className={`px-3 py-1 rounded text-xs font-bold uppercase transition-colors cursor-pointer ${
+                  viewMode === 'week' 
+                    ? 'bg-blue-600 text-white shadow-sm' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Semana
+              </button>
+            </div>
 
             {/* Sync Button */}
             {onSyncRequested && (
@@ -624,6 +663,10 @@ export default function InteractiveCalendarView({
               const dayNum = cell.date.getDate();
               const holiday = getHolidayForDate(cell.date);
 
+              const todayStr = formatDateString(new Date());
+              const isToday = dateStr === todayStr;
+              const isPast = cell.date.getTime() < new Date().setHours(0, 0, 0, 0) && !isToday;
+
               let dayLabel = `${dayNum}`;
               if (dayNum === 1) {
                 const monthShortName = MONTHS_PT[cell.date.getMonth()].substring(0, 3).toLowerCase();
@@ -637,6 +680,10 @@ export default function InteractiveCalendarView({
                   className={`min-h-[120px] sm:min-h-[145px] p-1.5 flex flex-col gap-1 transition-all cursor-pointer relative group border-r border-b border-slate-300/80 ${
                     !cell.isCurrentMonth
                       ? 'bg-slate-100/80 text-slate-400 opacity-40 grayscale-[25%] hover:opacity-90 hover:grayscale-0'
+                      : isPast
+                      ? 'bg-[#f8fafc] text-slate-500 opacity-60 grayscale-[30%] hover:opacity-90 hover:grayscale-0'
+                      : isToday
+                      ? 'bg-blue-50/50 ring-2 ring-inset ring-blue-500 hover:bg-blue-100/50 z-10 shadow-sm'
                       : holiday
                       ? 'bg-amber-50/60 hover:bg-amber-100/70'
                       : 'bg-[#f8fafc] text-slate-800 hover:bg-blue-50/70'
@@ -645,8 +692,10 @@ export default function InteractiveCalendarView({
                   {/* Top Day Number Header */}
                   <div className="flex items-center justify-between mb-0.5">
                     <div className="flex items-center gap-1 min-w-0">
-                      <span className={`text-xs sm:text-sm font-extrabold select-none ${
-                        holiday 
+                      <span className={`text-xs sm:text-sm font-extrabold select-none flex items-center justify-center ${
+                        isToday 
+                          ? 'h-6 w-6 rounded-full bg-blue-600 text-white shadow-sm'
+                          : holiday 
                           ? 'text-red-700 font-black' 
                           : cell.isCurrentMonth ? 'text-slate-800' : 'text-slate-400'
                       }`}>

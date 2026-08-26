@@ -86,6 +86,7 @@ function normalizeTrainingRow(row: any): Training {
     status: row.status || 'confirmado',
     description: row.description || undefined,
     customColor: row.customColor || row.custom_color || undefined,
+    attendeeCount: row.attendeeCount || row.attendee_count || undefined,
   };
 }
 
@@ -401,6 +402,7 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
       endDate: training.endDate,
       status: training.status,
       description: training.description || null,
+      attendeeCount: training.attendeeCount || null,
     });
 
     // 2. Second try: camelCase WITH customColor (if they added it later)
@@ -417,6 +419,7 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
         end_date: training.endDate,
         status: training.status,
         description: training.description || null,
+        attendee_count: training.attendeeCount || null,
       });
       error = retrySnake.error;
     }

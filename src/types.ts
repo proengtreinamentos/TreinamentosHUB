@@ -33,4 +33,5 @@ export interface Training {
   status: TrainingStatus;
   description?: string;
   customColor?: string; // Optional custom color override (hex or Tailwind)
+  attendeeCount?: number; // Number of attendees
 }

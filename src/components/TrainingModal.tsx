@@ -37,6 +37,7 @@ export default function TrainingModal({
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('17:00');
   const [status, setStatus] = useState<TrainingStatus>('confirmado');
+  const [attendeeCount, setAttendeeCount] = useState<number | ''>('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function TrainingModal({
         setEndTime(endParts[1]?.substring(0, 5) || '17:00');
         
         setStatus(training.status);
+        setAttendeeCount(training.attendeeCount ?? '');
       } else {
         if (titleRef.current) titleRef.current.value = '';
         if (descriptionRef.current) descriptionRef.current.value = '';
@@ -70,6 +72,7 @@ export default function TrainingModal({
         setEndTime('17:00');
         
         setStatus('confirmado');
+        setAttendeeCount('');
       }
       setError('');
     }
@@ -127,6 +130,7 @@ export default function TrainingModal({
       endDate: endIso,
       status,
       description: descriptionRef.current?.value.trim() || undefined,
+      attendeeCount: attendeeCount === '' ? undefined : Number(attendeeCount),
     });
     onClose();
   };
@@ -327,6 +331,23 @@ export default function TrainingModal({
                   Cancelado
                 </button>
               </div>
+            </div>
+
+            {/* Participantes */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
+                <User className="h-4 w-4 text-slate-400" />
+                Quantidade de Participantes (Opcional)
+              </label>
+              <input
+                id="training-attendee-count-input"
+                type="number"
+                min="0"
+                value={attendeeCount}
+                onChange={(e) => setAttendeeCount(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="Ex: 20"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all bg-white"
+              />
             </div>
 
             {/* Descrição */}
