@@ -236,7 +236,8 @@ export default function TrainingsManagement({
   };
 
   return (
-    <div className="p-4 sm:p-6 w-full max-w-none space-y-6">
+    <div className="flex flex-col h-full w-full max-w-none">
+      <div className="p-4 sm:p-6 pb-2 space-y-6 flex-shrink-0">
       {/* View Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
@@ -405,9 +406,12 @@ export default function TrainingsManagement({
         </div>
       </div>
 
+      </div>
+      
+      <div className="flex-1 min-h-0 px-4 sm:px-6 pb-6 overflow-hidden flex flex-col gap-4">
       {/* 🚀 FLOATING / STICKY BULK ACTION BAR */}
       {selectedIds.size > 0 && (
-        <div className="sticky top-4 z-30 rounded-xl border border-blue-200 bg-blue-900/95 text-white p-3.5 shadow-xl backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+        <div className="flex-shrink-0 z-30 rounded-xl border border-blue-200 bg-blue-900/95 text-white p-3.5 shadow-xl backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-3">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-xs font-black text-white">
               {selectedIds.size}
@@ -476,7 +480,7 @@ export default function TrainingsManagement({
       )}
 
       {/* Trainings Full Width Table */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm flex-1 min-h-0">
         {filteredTrainings.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50/50">
             <div className="rounded-full bg-slate-100 p-4 text-slate-400 mb-3">
@@ -488,10 +492,10 @@ export default function TrainingsManagement({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
             <table className="w-full table-auto border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-100/70 text-slate-600 text-xs font-extrabold uppercase tracking-wider select-none">
+              <thead className="sticky top-0 z-20">
+                <tr className="border-b border-slate-200 bg-slate-100 text-slate-600 text-xs font-extrabold uppercase tracking-wider select-none">
                   {/* Select All Checkbox */}
                   <th className="px-4 py-3.5 w-10 text-center">
                     <button
@@ -662,6 +666,7 @@ export default function TrainingsManagement({
             </table>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

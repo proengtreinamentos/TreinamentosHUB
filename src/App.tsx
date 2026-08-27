@@ -614,7 +614,7 @@ export default function App() {
   }, [trainings, deferredSearchQuery, selectedStatuses, selectedInstructorIds, selectedLocationIds]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-800 antialiased selection:bg-blue-100">
+    <div className="h-[100dvh] overflow-hidden bg-slate-50 flex flex-col md:flex-row font-sans text-slate-800 antialiased selection:bg-blue-100">
       
       {/* 🚀 Main Left Sidebar Navigation */}
       <MainSidebar
@@ -660,7 +660,7 @@ export default function App() {
         </header>
 
         {/* 🚀 Tab View Routing */}
-        <main className="flex-1 flex flex-col overflow-y-auto">
+        <main className="flex-1 flex flex-col overflow-hidden">
           {activeTab === 'interativo' && (
             <InteractiveCalendarView
               currentDate={currentDate}

@@ -89,7 +89,7 @@ export default function LocationsManagement({
   };
 
   return (
-    <div className="p-4 sm:p-6 w-full max-w-none space-y-6">
+    <div className="flex flex-col h-full w-full max-w-none p-4 sm:p-6 space-y-6 overflow-y-auto custom-scrollbar">
       {/* View Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
