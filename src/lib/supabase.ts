@@ -391,8 +391,7 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
   if (!supabase) return false;
 
   try {
-    // 1. First try: Exact camelCase matching the user's DB schema without customColor
-    // (since the DB might not have the customColor column)
+    // 1. First try: Exact camelCase matching the user's DB schema
     let { error } = await supabase.from('trainings').upsert({
       id: training.id,
       title: training.title,
@@ -405,11 +404,8 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
       attendeeCount: training.attendeeCount || null,
     });
 
-    // 2. Second try: camelCase WITH customColor (if they added it later)
-    if (error && error.message.includes('customColor')) {
-      // Ignore this specific error, we already tried without it
-    } else if (error) {
-      // 3. Fallback to snake_case payload if camelCase fails (e.g. for different DB setups)
+    if (error && (error.message.includes('attendeeCount') || error.message.includes('customColor') || error.message.includes('column'))) {
+      // 2. Second try: snake_case for DBs that use it
       const retrySnake = await supabase.from('trainings').upsert({
         id: training.id,
         title: training.title,
@@ -422,6 +418,35 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
         attendee_count: training.attendeeCount || null,
       });
       error = retrySnake.error;
+      
+      // 3. Third try: remove new columns if they don't exist at all (fallback to old schema)
+      if (error && (error.message.includes('attendee') || error.message.includes('column'))) {
+        const retryOld = await supabase.from('trainings').upsert({
+          id: training.id,
+          title: training.title,
+          instructorId: training.instructorId || null,
+          locationId: training.locationId || null,
+          startDate: training.startDate,
+          endDate: training.endDate,
+          status: training.status,
+          description: training.description || null,
+        });
+        error = retryOld.error;
+        
+        if (error && error.message.includes('column')) {
+            const retryOldSnake = await supabase.from('trainings').upsert({
+              id: training.id,
+              title: training.title,
+              instructor_id: training.instructorId || null,
+              location_id: training.locationId || null,
+              start_date: training.startDate,
+              end_date: training.endDate,
+              status: training.status,
+              description: training.description || null,
+            });
+            error = retryOldSnake.error;
+        }
+      }
     }
 
     if (error) {

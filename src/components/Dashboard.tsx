@@ -1,11 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Training, Instructor, Location } from '../types';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, AreaChart, Area,
+  PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
 import { MONTHS_PT } from '../utils/dateUtils';
-import { Users, GraduationCap, MapPin, CalendarCheck, TrendingUp, CheckCircle, AlertTriangle, XCircle, ChevronRight, User, Clock } from 'lucide-react';
+import { Users, GraduationCap, MapPin, CalendarCheck, TrendingUp, CheckCircle, AlertTriangle, User, Clock } from 'lucide-react';
 
 interface DashboardProps {
   trainings: Training[];
@@ -14,40 +14,76 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ trainings, instructors, locations }: DashboardProps) {
-  
-  // Basic Counts
-  const totalTrainings = trainings.length;
-  const totalInstructors = instructors.length;
-  const totalLocations = locations.length;
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
 
-  // New: Total Attendees (Alunos/Colaboradores)
-  const totalAttendees = useMemo(() => {
-    return trainings.reduce((acc, t) => acc + (t.attendeeCount || 0), 0);
+  // Extract unique months for filter
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    trainings.forEach(t => {
+      months.add(t.startDate.substring(0, 7)); // YYYY-MM
+    });
+    return Array.from(months).sort().reverse();
   }, [trainings]);
+
+  // Filter trainings by month
+  const filteredTrainings = useMemo(() => {
+    if (selectedMonth === 'all') return trainings;
+    return trainings.filter(t => t.startDate.startsWith(selectedMonth));
+  }, [trainings, selectedMonth]);
+
+  // Metrics based on filter
+  const totalTrainings = filteredTrainings.length;
+  const now = new Date();
+  const executedTrainings = filteredTrainings.filter(t => t.status !== 'cancelado' && new Date(t.endDate || t.startDate).getTime() < now.getTime()).length;
+  const pendingTrainings = filteredTrainings.filter(t => t.status !== 'cancelado' && new Date(t.endDate || t.startDate).getTime() >= now.getTime()).length;
+  const totalAttendees = filteredTrainings.reduce((acc, t) => acc + (t.attendeeCount || 0), 0);
+  const totalInstructorsInvolved = new Set(filteredTrainings.map(t => t.instructorId).filter(Boolean)).size;
+
+  const totalHours = useMemo(() => {
+    return filteredTrainings.reduce((acc, t) => {
+      const start = new Date(t.startDate).getTime();
+      const end = new Date(t.endDate).getTime();
+      if (!isNaN(start) && !isNaN(end) && end > start) {
+        return acc + (end - start) / (1000 * 60 * 60);
+      }
+      return acc;
+    }, 0);
+  }, [filteredTrainings]);
 
   // Status Breakdown
   const statusCounts = useMemo(() => {
-    let confirmado = 0;
-    let aguardando = 0;
-    let cancelado = 0;
+    let realizados = 0;
+    let pendentes = 0;
+    let cancelados = 0;
     
-    trainings.forEach(t => {
-      if (t.status === 'confirmado') confirmado++;
-      if (t.status === 'aguardando') aguardando++;
-      if (t.status === 'cancelado') cancelado++;
+    const now = new Date();
+    
+    filteredTrainings.forEach(t => {
+      if (t.status === 'cancelado') {
+        cancelados++;
+      } else {
+        const endDate = new Date(t.endDate || t.startDate);
+        if (endDate.getTime() < now.getTime()) {
+          realizados++;
+        } else {
+          pendentes++;
+        }
+      }
     });
     
     return [
-      { name: 'Confirmado', value: confirmado, color: '#10b981' }, // Emerald-500
-      { name: 'Aguardando', value: aguardando, color: '#f59e0b' }, // Amber-500
-      { name: 'Cancelado', value: cancelado, color: '#94a3b8' },  // Slate-400
+      { name: 'Realizados', value: realizados, color: '#10b981' },
+      { name: 'Pendentes / Agendados', value: pendentes, color: '#f59e0b' },
+      { name: 'Cancelados', value: cancelados, color: '#94a3b8' },
     ];
-  }, [trainings]);
+  }, [filteredTrainings]);
 
-  // Trainings per month (for Area Chart)
+  // Trainings per month (for Area Chart) - usually this is for the whole year, but let's keep it all-time/annual context
   const trainingsPerMonth = useMemo(() => {
     const counts = new Array(12).fill(0);
     trainings.forEach(t => {
+      // For this chart, let's just show the year's evolution. If they select a month, maybe it's weird to show all? 
+      // But "Evolução do Ano" implies all time. Let's use all trainings to show the trend always.
       const d = new Date(t.startDate);
       counts[d.getMonth()]++;
     });
@@ -60,7 +96,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
   // Trainings per instructor
   const trainingsPerInstructor = useMemo(() => {
     const map = new Map<string, number>();
-    trainings.forEach(t => {
+    filteredTrainings.forEach(t => {
       if (t.instructorId && t.status !== 'cancelado') {
         map.set(t.instructorId, (map.get(t.instructorId) || 0) + 1);
       }
@@ -75,23 +111,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
         };
       })
       .sort((a, b) => b.quantidade - a.quantidade);
-  }, [trainings, instructors]);
-
-  // Upcoming trainings (Next 30 days)
-  const upcomingTrainings = useMemo(() => {
-    const now = new Date();
-    const nextMonth = new Date();
-    nextMonth.setDate(now.getDate() + 30);
-    
-    return trainings
-      .filter(t => {
-        if (t.status === 'cancelado') return false;
-        const d = new Date(t.startDate);
-        return d >= now && d <= nextMonth;
-      })
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-      .slice(0, 5); // Limit to top 5
-  }, [trainings]);
+  }, [filteredTrainings, instructors]);
 
   const COLORS = ['#0ea5e9', '#8b5cf6', '#f43f5e', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#14b8a6'];
 
@@ -99,16 +119,30 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
     <div className="flex-1 flex flex-col h-full bg-[#f8fafc] overflow-y-auto custom-scrollbar p-5 sm:p-8">
       <div className="max-w-screen-2xl mx-auto w-full space-y-8">
         
-        {/* Header */}
+        {/* Header and Filter */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-5">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">Dashboard Gerencial</h1>
             <p className="text-slate-500 font-medium mt-1">Visão geral, indicadores e métricas de desempenho de treinamentos.</p>
           </div>
+          <div className="w-full md:w-64">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Mês de Referência</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="all">Todo o Período</option>
+              {availableMonths.map(m => {
+                const [y, mo] = m.split('-');
+                return <option key={m} value={m}>{`${mo}/${y}`}</option>;
+              })}
+            </select>
+          </div>
         </div>
 
         {/* Top Highlight Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-5">
           {/* Total Trainings */}
           <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full transition-transform group-hover:scale-150 z-0" />
@@ -116,13 +150,40 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
               <div className="p-3 bg-blue-600 text-white rounded-xl shadow-md">
                 <CalendarCheck className="h-6 w-6 stroke-[2]" />
               </div>
-              <span className="text-xs font-bold px-2.5 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" /> All Time
-              </span>
             </div>
             <div className="relative z-10">
-              <p className="text-4xl font-black text-slate-900 tracking-tight">{totalTrainings}</p>
-              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mt-1">Total de Turmas</h3>
+              <div className="flex items-baseline gap-2">
+                <p className="text-4xl font-black text-slate-900 tracking-tight">{totalTrainings}</p>
+              </div>
+              <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Turmas Cadastradas</h3>
+            </div>
+          </div>
+
+          {/* Executed Trainings */}
+          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full transition-transform group-hover:scale-150 z-0" />
+            <div className="relative z-10 flex items-center justify-between mb-4">
+              <div className="p-3 bg-emerald-500 text-white rounded-xl shadow-md">
+                <CheckCircle className="h-6 w-6 stroke-[2]" />
+              </div>
+            </div>
+            <div className="relative z-10">
+              <p className="text-4xl font-black text-slate-900 tracking-tight">{executedTrainings}</p>
+              <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Acontecidos / Realizados</h3>
+            </div>
+          </div>
+
+          {/* Pending Trainings */}
+          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full transition-transform group-hover:scale-150 z-0" />
+            <div className="relative z-10 flex items-center justify-between mb-4">
+              <div className="p-3 bg-amber-500 text-white rounded-xl shadow-md">
+                <Clock className="h-6 w-6 stroke-[2]" />
+              </div>
+            </div>
+            <div className="relative z-10">
+              <p className="text-4xl font-black text-slate-900 tracking-tight">{pendingTrainings}</p>
+              <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Pendentes / Agendados</h3>
             </div>
           </div>
 
@@ -136,11 +197,11 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
             </div>
             <div className="relative z-10">
               <p className="text-4xl font-black text-slate-900 tracking-tight">{totalAttendees}</p>
-              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mt-1">Alunos Treinados</h3>
+              <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Alunos Treinados</h3>
             </div>
           </div>
 
-          {/* Total Instructors */}
+          {/* Total Instructors Involved */}
           <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-rose-50 rounded-full transition-transform group-hover:scale-150 z-0" />
             <div className="relative z-10 flex items-center justify-between mb-4">
@@ -149,22 +210,24 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
               </div>
             </div>
             <div className="relative z-10">
-              <p className="text-4xl font-black text-slate-900 tracking-tight">{totalInstructors}</p>
-              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mt-1">Equipe de Instrutores</h3>
+              <p className="text-4xl font-black text-slate-900 tracking-tight">{totalInstructorsInvolved}</p>
+              <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Instrutores Envolvidos</h3>
             </div>
           </div>
 
-          {/* Total Locations */}
+          {/* Total Hours */}
           <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full transition-transform group-hover:scale-150 z-0" />
             <div className="relative z-10 flex items-center justify-between mb-4">
               <div className="p-3 bg-amber-500 text-white rounded-xl shadow-md">
-                <MapPin className="h-6 w-6 stroke-[2]" />
+                <Clock className="h-6 w-6 stroke-[2]" />
               </div>
             </div>
             <div className="relative z-10">
-              <p className="text-4xl font-black text-slate-900 tracking-tight">{totalLocations}</p>
-              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mt-1">Locais / Ambientes</h3>
+              <p className="text-4xl font-black text-slate-900 tracking-tight">
+                {totalHours > 0 ? (totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)) : 0}<span className="text-xl">h</span>
+              </p>
+              <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Horas de Treinamento</h3>
             </div>
           </div>
         </div>
@@ -175,7 +238,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
           {/* Main Chart - Trainings over time */}
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 lg:col-span-2 flex flex-col">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-base font-black text-slate-800 uppercase tracking-wide">Evolução de Treinamentos (Ano)</h3>
+              <h3 className="text-base font-black text-slate-800 uppercase tracking-wide">Evolução de Treinamentos (Ano - Todos)</h3>
             </div>
             <div className="flex-1 min-h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -200,12 +263,12 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
             </div>
           </div>
 
-          {/* Right Column: Status Breakdown & Upcoming */}
+          {/* Right Column: Status Breakdown */}
           <div className="flex flex-col gap-6 lg:col-span-1">
             
             {/* Status Breakdown */}
             <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 flex-1">
-              <h3 className="text-base font-black text-slate-800 uppercase tracking-wide mb-6">Status dos Agendamentos</h3>
+              <h3 className="text-base font-black text-slate-800 uppercase tracking-wide mb-6">Status ({selectedMonth === 'all' ? 'Geral' : 'do Mês'})</h3>
               <div className="h-48 w-full relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -257,7 +320,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
           
           {/* Distribution by Instructor */}
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
-            <h3 className="text-base font-black text-slate-800 uppercase tracking-wide mb-6">Distribuição por Instrutor (Realizados)</h3>
+            <h3 className="text-base font-black text-slate-800 uppercase tracking-wide mb-6">Distribuição por Instrutor ({selectedMonth === 'all' ? 'Geral' : 'no Mês'})</h3>
             <div className="h-64 w-full">
               {trainingsPerInstructor.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -282,15 +345,21 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
             </div>
           </div>
 
-          {/* Upcoming Trainings List */}
+          {/* Trainings List */}
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-black text-slate-800 uppercase tracking-wide">Próximos Agendamentos (30 dias)</h3>
+              <h3 className="text-base font-black text-slate-800 uppercase tracking-wide">
+                {selectedMonth === 'all' ? 'Próximos Agendamentos' : 'Agendamentos do Mês'}
+              </h3>
             </div>
             
             <div className="flex-1 flex flex-col gap-3 overflow-y-auto">
-              {upcomingTrainings.length > 0 ? (
-                upcomingTrainings.map(t => {
+              {filteredTrainings.length > 0 ? (
+                // Only show upcoming in "all" view, or show the month's trainings in month view
+                (selectedMonth === 'all' 
+                  ? filteredTrainings.filter(t => new Date(t.startDate) >= new Date() && t.status !== 'cancelado').slice(0, 5)
+                  : filteredTrainings
+                ).map(t => {
                   const date = new Date(t.startDate);
                   const inst = instructors.find(i => i.id === t.instructorId);
                   
@@ -314,10 +383,12 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
                         </div>
                       </div>
                       <div className="ml-2">
-                        {t.status === 'confirmado' ? (
+                        {t.status === 'cancelado' ? (
+                          <AlertTriangle className="h-5 w-5 text-slate-400" />
+                        ) : new Date(t.endDate || t.startDate).getTime() < new Date().getTime() ? (
                           <CheckCircle className="h-5 w-5 text-emerald-500" />
                         ) : (
-                          <AlertTriangle className="h-5 w-5 text-amber-500" />
+                          <Clock className="h-5 w-5 text-amber-500" />
                         )}
                       </div>
                     </div>
@@ -326,7 +397,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-2">
                   <CalendarCheck className="h-8 w-8 opacity-20" />
-                  <p className="text-sm font-semibold">Nenhum treinamento agendado para os próximos 30 dias.</p>
+                  <p className="text-sm font-semibold">Nenhum treinamento encontrado.</p>
                 </div>
               )}
             </div>

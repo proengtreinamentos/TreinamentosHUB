@@ -33,12 +33,11 @@ interface InteractiveCalendarViewProps {
   trainings: Training[];
   instructors: Instructor[];
   locations: Location[];
-  onSaveTraining: (training: Omit<Training, 'id'> & { id?: string }) => void;
-  onDeleteTraining: (id: string) => void;
-  onSaveInstructor?: (instructor: Omit<Instructor, 'id'> & { id?: string }) => void;
   onSyncRequested?: () => Promise<void>;
   viewMode?: 'month' | 'week';
   onViewModeChange?: (mode: 'month' | 'week') => void;
+  onOpenAddModal: (date: Date) => void;
+  onOpenEditModal: (training: Training) => void;
 }
 
 // Preset color swatches matching the exact image palette
@@ -59,11 +58,11 @@ export default function InteractiveCalendarView({
   trainings,
   instructors,
   locations,
-  onSaveTraining,
-  onDeleteTraining,
   onSyncRequested,
   viewMode = 'month',
   onViewModeChange,
+  onOpenAddModal,
+  onOpenEditModal,
 }: InteractiveCalendarViewProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -149,101 +148,18 @@ export default function InteractiveCalendarView({
     ? Math.round((realizadosCount / totalMonthTrainings) * 100)
     : 0;
 
-  // Quick Add / Edit Modal state
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTrainingId, setEditingTrainingId] = useState<string | null>(null);
-  const [targetDateStr, setTargetDateStr] = useState<string>('');
-
-  // Quick Add Form state
-  const [formTitle, setFormTitle] = useState('');
-  const [formInstructorId, setFormInstructorId] = useState('');
-  const [formLocationId, setFormLocationId] = useState('');
-  const [formColor, setFormColor] = useState('');
-  const [formStartTime, setFormStartTime] = useState('08:00');
-  const [formEndTime, setFormEndTime] = useState('17:00');
-  const [formError, setFormError] = useState('');
-
-  // Maps for fast lookup (declarations moved up above)
-
   // Open modal for creating new training on a specific date string (YYYY-MM-DD)
   const handleOpenNewForDate = (dateStr: string) => {
-    setEditingTrainingId(null);
-    setTargetDateStr(dateStr);
-    setFormTitle('');
-    
-    // Default instructor and color
-    const defaultInst = instructors[0];
-    setFormInstructorId(defaultInst?.id || '');
-    setFormColor(defaultInst?.color || '#6b21a8');
-    setFormLocationId(locations[0]?.id || '');
-    
-    setFormStartTime('08:00');
-    setFormEndTime('17:00');
-    setFormError('');
-    setIsModalOpen(true);
+    // Parse dateStr (e.g. 2026-08-26) local time
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    onOpenAddModal(date);
   };
 
   // Open modal for editing existing training
   const handleOpenEditTraining = (training: Training, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent trigger day click
-    setEditingTrainingId(training.id);
-    
-    const [datePart, startTimePart] = training.startDate.split('T');
-    const [, endTimePart] = training.endDate.split('T');
-
-    setTargetDateStr(datePart);
-    setFormTitle(training.title);
-    setFormInstructorId(training.instructorId);
-    setFormLocationId(training.locationId);
-    
-    const inst = instructorsMap.get(training.instructorId);
-    setFormColor(training.customColor || inst?.color || '#6b21a8');
-    
-    setFormStartTime(startTimePart?.substring(0, 5) || '08:00');
-    setFormEndTime(endTimePart?.substring(0, 5) || '17:00');
-    setFormError('');
-    setIsModalOpen(true);
-  };
-
-  // Handle instructor selection in form -> auto update color if not overridden
-  const handleInstructorSelect = (id: string) => {
-    setFormInstructorId(id);
-    const inst = instructorsMap.get(id);
-    if (inst?.color) {
-      setFormColor(inst.color);
-    }
-  };
-
-  // Save Modal Form
-  const handleSubmitForm = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-
-    if (!formTitle.trim()) {
-      setFormError('Por favor, informe o título do treinamento.');
-      return;
-    }
-
-    if (!targetDateStr) {
-      setFormError('Selecione uma data.');
-      return;
-    }
-
-    const startIso = `${targetDateStr}T${formStartTime}`;
-    const endIso = `${targetDateStr}T${formEndTime}`;
-
-    onSaveTraining({
-      id: editingTrainingId || undefined,
-      title: formTitle.trim(),
-      instructorId: formInstructorId || instructors[0]?.id || '',
-      locationId: formLocationId || locations[0]?.id || '',
-      startDate: startIso,
-      endDate: endIso,
-      status: 'confirmado',
-      customColor: formColor || undefined,
-    });
-
-    setIsModalOpen(false);
+    onOpenEditModal(training);
   };
 
   // Group trainings by date (YYYY-MM-DD)
@@ -551,7 +467,7 @@ export default function InteractiveCalendarView({
             </div>
 
             {/* 3. ESTATÍSTICAS DO MÊS Card (Redesigned matching system visual identity) */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 text-slate-900 shadow-md flex flex-col gap-2.5 mt-auto">
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 text-slate-900 shadow-md flex flex-col gap-2.5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-xs">
@@ -829,194 +745,6 @@ export default function InteractiveCalendarView({
 
       </div>
 
-      {/* ============================================================ */}
-      {/* QUICK ADD / EDIT MODAL                                      */}
-      {/* ============================================================ */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150">
-            
-            {/* Modal Header */}
-            <div className="bg-[#001130] px-5 py-4 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Tag className="h-5 w-5 text-red-500" />
-                <h3 className="text-sm font-black tracking-wide uppercase">
-                  {editingTrainingId ? 'Editar Treinamento' : 'Agendamento Rápido'}
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Body / Form */}
-            <form onSubmit={handleSubmitForm} className="p-5 space-y-4">
-              
-              {formError && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-                  <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              {/* Data display */}
-              <div className="flex items-center justify-between bg-slate-100 p-2.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700">
-                <span className="flex items-center gap-1.5 text-slate-600">
-                  <CalendarIcon className="h-4 w-4 text-red-600" />
-                  Data Selecionada:
-                </span>
-                <span className="text-red-600 font-black text-sm">
-                  {targetDateStr ? targetDateStr.split('-').reverse().join('/') : ''}
-                </span>
-              </div>
-
-              {/* Título do Treinamento */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Título do Treinamento <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="Ex: NR 35 - P3, PEMT - Ecolab, Integração..."
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-red-500 focus:ring-2 focus:ring-red-100 focus:outline-none transition-all"
-                  autoFocus
-                  required
-                />
-              </div>
-
-              {/* Seleção do Instrutor */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Instrutor Responsável
-                </label>
-                <select
-                  value={formInstructorId}
-                  onChange={(e) => handleInstructorSelect(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:ring-2 focus:ring-red-100 focus:outline-none transition-all bg-white"
-                >
-                  {instructors.map((inst) => (
-                    <option key={inst.id} value={inst.id}>
-                      {inst.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Palette Color Swatches */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Cor da Tag
-                </label>
-                <div className="flex items-center flex-wrap gap-2">
-                  {COLOR_PRESETS.map((preset) => {
-                    const isSelected = formColor.toLowerCase() === preset.hex.toLowerCase();
-                    return (
-                      <button
-                        key={preset.hex}
-                        type="button"
-                        onClick={() => setFormColor(preset.hex)}
-                        style={{ backgroundColor: preset.hex }}
-                        className={`h-7 w-7 rounded-full flex items-center justify-center text-white transition-transform cursor-pointer ${
-                          isSelected ? 'scale-110 ring-2 ring-slate-900 ring-offset-2' : 'hover:scale-105 opacity-90'
-                        }`}
-                        title={preset.name}
-                      >
-                        {isSelected && <Check className="h-4 w-4 stroke-[3]" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Local */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Local
-                </label>
-                <select
-                  value={formLocationId}
-                  onChange={(e) => setFormLocationId(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:ring-2 focus:ring-red-100 focus:outline-none transition-all bg-white"
-                >
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Horários */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-slate-400" /> Início
-                  </label>
-                  <input
-                    type="time"
-                    value={formStartTime}
-                    onChange={(e) => setFormStartTime(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:ring-2 focus:ring-red-100 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-slate-400" /> Término
-                  </label>
-                  <input
-                    type="time"
-                    value={formEndTime}
-                    onChange={(e) => setFormEndTime(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:ring-2 focus:ring-red-100 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                {editingTrainingId ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (editingTrainingId) {
-                        onDeleteTraining(editingTrainingId);
-                        setIsModalOpen(false);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 border border-red-200 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Excluir
-                  </button>
-                ) : <div />}
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-lg text-xs font-black bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-200 transition-all cursor-pointer uppercase tracking-wider"
-                  >
-                    Salvar
-                  </button>
-                </div>
-              </div>
-
-            </form>
-
-          </div>
-        </div>
-      )}
 
     </div>
   );

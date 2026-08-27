@@ -75,11 +75,6 @@ export default function MainSidebar({
       label: 'Locais de Treinamento',
       icon: MapPin,
     },
-    {
-      id: 'relatorios',
-      label: 'Relatórios',
-      icon: FileText,
-    },
   ];
 
   const handleSelect = (tab: TabType) => {

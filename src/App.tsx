@@ -668,11 +668,18 @@ export default function App() {
               trainings={trainings}
               instructors={instructors}
               locations={locations}
-              onSaveTraining={handleSaveTraining}
-              onDeleteTraining={handleDeleteTraining}
               onSyncRequested={handleSyncAll}
               viewMode={calendarView === 'week' ? 'week' : 'month'}
               onViewModeChange={(mode) => setCalendarView(mode)}
+              onOpenAddModal={(date) => {
+                setEditingTraining(null);
+                setModalDefaultDate(date);
+                setActiveModal('training');
+              }}
+              onOpenEditModal={(training) => {
+                setEditingTraining(training);
+                setActiveModal('training');
+              }}
             />
           )}
 

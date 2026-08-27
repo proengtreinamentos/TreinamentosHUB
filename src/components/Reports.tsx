@@ -23,7 +23,7 @@ export default function Reports({ trainings, instructors, locations }: ReportsPr
       // YYYY-MM
       months.add(t.startDate.substring(0, 7));
     });
-    return Array.from(months).sort();
+    return Array.from(months).sort().reverse();
   }, [trainings]);
 
   const filteredTrainings = useMemo(() => {
@@ -34,12 +34,22 @@ export default function Reports({ trainings, instructors, locations }: ReportsPr
     }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
   }, [trainings, selectedMonth, selectedInstructor]);
 
+  const totalAttendees = filteredTrainings.reduce((acc, t) => acc + (t.attendeeCount || 0), 0);
+  const totalHours = filteredTrainings.reduce((acc, t) => {
+    const start = new Date(t.startDate).getTime();
+    const end = new Date(t.endDate).getTime();
+    if (!isNaN(start) && !isNaN(end) && end > start) {
+      return acc + (end - start) / (1000 * 60 * 60);
+    }
+    return acc;
+  }, 0);
+
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-y-auto print:bg-white print:overflow-visible">
+    <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-y-auto print:bg-white print:overflow-visible custom-scrollbar">
       {/* Controls Area (Hidden on Print) */}
       <div className="p-4 md:p-8 print:hidden border-b border-slate-200 bg-white">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-4 items-end justify-between">
@@ -50,7 +60,7 @@ export default function Reports({ trainings, instructors, locations }: ReportsPr
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer shadow-sm"
               >
                 <option value="all">Todos os Meses</option>
                 {availableMonths.map(m => {
@@ -64,7 +74,7 @@ export default function Reports({ trainings, instructors, locations }: ReportsPr
               <select
                 value={selectedInstructor}
                 onChange={(e) => setSelectedInstructor(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer shadow-sm"
               >
                 <option value="all">Todos os Instrutores</option>
                 {instructors.map(i => (
@@ -89,17 +99,31 @@ export default function Reports({ trainings, instructors, locations }: ReportsPr
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 print:border-none print:shadow-none print:p-0">
           
           {/* Print Header */}
-          <div className="mb-8 border-b pb-4 print:border-black">
-            <h1 className="text-3xl font-black tracking-tighter text-slate-900 print:text-black">
-              PRO<span className="text-red-600 print:text-black">ENG</span>
-            </h1>
-            <h2 className="text-xl font-bold text-slate-700 mt-2 print:text-black">Relatório de Treinamentos</h2>
-            <div className="text-sm text-slate-500 mt-1 print:text-black">
-              {selectedMonth !== 'all' ? `Referência: ${selectedMonth.split('-').reverse().join('/')}` : 'Período Completo'}
-              {selectedInstructor !== 'all' && ` | Instrutor: ${instructorsMap.get(selectedInstructor)?.name}`}
+          <div className="mb-8 border-b pb-4 print:border-black flex flex-col md:flex-row justify-between md:items-end gap-4">
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter text-slate-900 print:text-black">
+                PRO<span className="text-red-600 print:text-black">ENG</span>
+              </h1>
+              <h2 className="text-xl font-bold text-slate-700 mt-2 print:text-black uppercase tracking-tight">Relatório de Treinamentos</h2>
+              <div className="text-sm font-semibold text-slate-500 mt-2 print:text-black">
+                {selectedMonth !== 'all' ? `Referência: ${selectedMonth.split('-').reverse().join('/')}` : 'Período Completo'}
+                {selectedInstructor !== 'all' && ` | Instrutor: ${instructorsMap.get(selectedInstructor)?.name}`}
+              </div>
             </div>
-            <div className="text-sm text-slate-500 print:text-black mt-1">
-              Total de Registros: {filteredTrainings.length}
+            
+            <div className="flex gap-6 text-right">
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider print:text-black">Turmas</p>
+                <p className="text-2xl font-black text-slate-800 print:text-black">{filteredTrainings.length}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider print:text-black">Alunos</p>
+                <p className="text-2xl font-black text-slate-800 print:text-black">{totalAttendees}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider print:text-black">Horas</p>
+                <p className="text-2xl font-black text-slate-800 print:text-black">{totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}h</p>
+              </div>
             </div>
           </div>
 
@@ -111,38 +135,48 @@ export default function Reports({ trainings, instructors, locations }: ReportsPr
                   <th className="pb-3 pt-2 px-2 font-bold text-slate-700 uppercase text-xs print:text-black">Data/Hora</th>
                   <th className="pb-3 pt-2 px-2 font-bold text-slate-700 uppercase text-xs print:text-black">Treinamento</th>
                   <th className="pb-3 pt-2 px-2 font-bold text-slate-700 uppercase text-xs print:text-black">Instrutor</th>
-                  <th className="pb-3 pt-2 px-2 font-bold text-slate-700 uppercase text-xs print:text-black">Local</th>
+                  <th className="pb-3 pt-2 px-2 font-bold text-slate-700 uppercase text-xs print:text-black">Alunos</th>
+                  <th className="pb-3 pt-2 px-2 font-bold text-slate-700 uppercase text-xs print:text-black">Carga</th>
                   <th className="pb-3 pt-2 px-2 font-bold text-slate-700 uppercase text-xs print:text-black">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 print:divide-black/20">
                 {filteredTrainings.map(t => {
                   const inst = t.instructorId ? instructorsMap.get(t.instructorId) : undefined;
-                  const loc = t.locationId ? locationsMap.get(t.locationId) : undefined;
+                  
+                  let hours = 0;
+                  const start = new Date(t.startDate).getTime();
+                  const end = new Date(t.endDate).getTime();
+                  if (!isNaN(start) && !isNaN(end) && end > start) {
+                    hours = (end - start) / (1000 * 60 * 60);
+                  }
                   
                   return (
-                    <tr key={t.id} className="hover:bg-slate-50 print:hover:bg-transparent">
+                    <tr key={t.id} className="hover:bg-slate-50 print:hover:bg-transparent transition-colors">
                       <td className="py-3 px-2 align-top print:py-1">
-                        <div className="font-medium text-slate-900 print:text-black whitespace-nowrap">{formatDateString(t.startDate)}</div>
-                        <div className="text-xs text-slate-500 print:text-black whitespace-nowrap">{formatTimeString(t.startDate)} - {formatTimeString(t.endDate)}</div>
+                        <div className="font-bold text-slate-900 print:text-black whitespace-nowrap">{formatDateString(t.startDate)}</div>
+                        <div className="text-xs font-semibold text-slate-500 print:text-black whitespace-nowrap">{formatTimeString(t.startDate)} - {formatTimeString(t.endDate)}</div>
                       </td>
                       <td className="py-3 px-2 align-top print:py-1">
-                        <div className="font-semibold text-slate-800 print:text-black">{t.title}</div>
-                        {t.description && <div className="text-xs text-slate-500 print:text-black line-clamp-1">{t.description}</div>}
+                        <div className="font-bold text-slate-800 print:text-black">{t.title}</div>
+                        {t.description && <div className="text-xs font-medium text-slate-500 print:text-black line-clamp-1">{t.description}</div>}
                       </td>
-                      <td className="py-3 px-2 align-top print:py-1 text-sm text-slate-700 print:text-black">
+                      <td className="py-3 px-2 align-top print:py-1 text-sm font-semibold text-slate-700 print:text-black">
                         {inst ? inst.name : 'N/A'}
                       </td>
-                      <td className="py-3 px-2 align-top print:py-1 text-sm text-slate-700 print:text-black">
-                        {loc ? loc.name : 'N/A'}
+                      <td className="py-3 px-2 align-top print:py-1 text-sm font-bold text-slate-700 print:text-black text-center sm:text-left">
+                        {t.attendeeCount || 0}
+                      </td>
+                      <td className="py-3 px-2 align-top print:py-1 text-sm font-bold text-slate-700 print:text-black">
+                        {hours > 0 ? `${hours % 1 === 0 ? hours : hours.toFixed(1)}h` : '-'}
                       </td>
                       <td className="py-3 px-2 align-top print:py-1 text-sm print:text-black">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium 
-                          ${t.status === 'confirmado' ? 'bg-emerald-50 text-emerald-700 print:bg-transparent print:border print:border-black' : 
-                            t.status === 'aguardando' ? 'bg-amber-50 text-amber-700 print:bg-transparent print:border print:border-black' : 
-                            'bg-red-50 text-red-700 print:bg-transparent print:border print:border-black'}`}
+                        <span className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-black uppercase tracking-wider
+                          ${t.status === 'confirmado' ? 'bg-emerald-100 text-emerald-700 print:bg-transparent print:border print:border-black' : 
+                            t.status === 'aguardando' ? 'bg-amber-100 text-amber-700 print:bg-transparent print:border print:border-black' : 
+                            'bg-red-100 text-red-700 print:bg-transparent print:border print:border-black'}`}
                         >
-                          {t.status.toUpperCase()}
+                          {t.status}
                         </span>
                       </td>
                     </tr>
@@ -150,7 +184,7 @@ export default function Reports({ trainings, instructors, locations }: ReportsPr
                 })}
                 {filteredTrainings.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-500 print:text-black">
+                    <td colSpan={6} className="py-8 text-center font-semibold text-slate-500 print:text-black">
                       Nenhum treinamento encontrado para os filtros selecionados.
                     </td>
                   </tr>
@@ -160,10 +194,9 @@ export default function Reports({ trainings, instructors, locations }: ReportsPr
           </div>
 
           {/* Print Footer */}
-          <div className="hidden print:block mt-8 pt-4 border-t border-black text-xs text-center">
+          <div className="hidden print:block mt-8 pt-4 border-t border-black text-xs font-semibold text-center text-black">
             Gerado em {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')} pelo sistema PROENG.
           </div>
-
         </div>
       </div>
     </div>
