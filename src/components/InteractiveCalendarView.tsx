@@ -569,7 +569,7 @@ export default function InteractiveCalendarView({
           </div>
 
           {/* Month Days Grid */}
-          <div className="flex-1 grid grid-cols-7 auto-rows-[minmax(140px,auto)] min-h-0 bg-slate-300 gap-[1px] overflow-y-auto custom-scrollbar">
+          <div className="flex-1 grid grid-cols-7 min-h-0 bg-slate-300 gap-[1px] overflow-y-auto custom-scrollbar" style={{ gridAutoRows: "minmax(140px, max-content)" }}>
             {gridDays.map((cell) => {
               const dateStr = formatDateString(cell.date);
               const dayTrainings = trainingsByDate.get(dateStr) || [];
@@ -590,7 +590,7 @@ export default function InteractiveCalendarView({
                 <div
                   key={cell.key}
                   onClick={() => handleOpenNewForDate(dateStr)}
-                  className={`min-h-[140px] p-1.5 flex flex-col gap-1 transition-all cursor-pointer relative group border-r border-b border-slate-300/80 ${
+                  className={`p-1.5 flex flex-col gap-1 transition-all cursor-pointer relative group border-r border-b border-slate-300/80 ${
                     !cell.isCurrentMonth
                       ? 'bg-slate-100/80 text-slate-400 opacity-40 grayscale-[25%] hover:opacity-90 hover:grayscale-0'
                       : isPast

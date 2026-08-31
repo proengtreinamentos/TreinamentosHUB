@@ -120,9 +120,9 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
       <div className="max-w-screen-2xl mx-auto w-full space-y-8">
         
         {/* Header and Filter */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-5">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 ">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">Dashboard Gerencial</h1>
+            <h1 className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent tracking-tight uppercase">Dashboard Gerencial</h1>
             <p className="text-slate-500 font-medium mt-1">Visão geral, indicadores e métricas de desempenho de treinamentos.</p>
           </div>
           <div className="w-full md:w-64">
@@ -144,7 +144,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
         {/* Top Highlight Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-5">
           {/* Total Trainings */}
-          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 flex flex-col relative overflow-hidden group hover:shadow-xl transition-shadow">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full transition-transform group-hover:scale-150 z-0" />
             <div className="relative z-10 flex items-center justify-between mb-4">
               <div className="p-3 bg-blue-600 text-white rounded-xl shadow-md">
@@ -160,7 +160,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
           </div>
 
           {/* Executed Trainings */}
-          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 flex flex-col relative overflow-hidden group hover:shadow-xl transition-shadow">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full transition-transform group-hover:scale-150 z-0" />
             <div className="relative z-10 flex items-center justify-between mb-4">
               <div className="p-3 bg-emerald-500 text-white rounded-xl shadow-md">
@@ -174,7 +174,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
           </div>
 
           {/* Pending Trainings */}
-          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 flex flex-col relative overflow-hidden group hover:shadow-xl transition-shadow">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full transition-transform group-hover:scale-150 z-0" />
             <div className="relative z-10 flex items-center justify-between mb-4">
               <div className="p-3 bg-amber-500 text-white rounded-xl shadow-md">
@@ -188,7 +188,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
           </div>
 
           {/* Total Attendees */}
-          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 flex flex-col relative overflow-hidden group hover:shadow-xl transition-shadow">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full transition-transform group-hover:scale-150 z-0" />
             <div className="relative z-10 flex items-center justify-between mb-4">
               <div className="p-3 bg-indigo-600 text-white rounded-xl shadow-md">
@@ -202,7 +202,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
           </div>
 
           {/* Total Instructors Involved */}
-          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 flex flex-col relative overflow-hidden group hover:shadow-xl transition-shadow">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-rose-50 rounded-full transition-transform group-hover:scale-150 z-0" />
             <div className="relative z-10 flex items-center justify-between mb-4">
               <div className="p-3 bg-rose-500 text-white rounded-xl shadow-md">
@@ -216,7 +216,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
           </div>
 
           {/* Total Hours */}
-          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-5 flex flex-col relative overflow-hidden group">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 flex flex-col relative overflow-hidden group hover:shadow-xl transition-shadow">
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full transition-transform group-hover:scale-150 z-0" />
             <div className="relative z-10 flex items-center justify-between mb-4">
               <div className="p-3 bg-amber-500 text-white rounded-xl shadow-md">
@@ -236,7 +236,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Main Chart - Trainings over time */}
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 lg:col-span-2 flex flex-col">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 lg:col-span-2 flex flex-col">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-base font-black text-slate-800 uppercase tracking-wide">Evolução de Treinamentos (Ano - Todos)</h3>
             </div>
@@ -258,6 +258,8 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
                     itemStyle={{ color: '#0f172a', fontWeight: 900 }}
                   />
                   <Area type="monotone" dataKey="quantidade" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorTreinamentos)" />
+                    <LabelList dataKey="quantidade" position="top" fill="#2563eb" fontSize={11} fontWeight="bold" formatter={(value) => value > 0 ? value : ''} />
+
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -267,7 +269,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
           <div className="flex flex-col gap-6 lg:col-span-1">
             
             {/* Status Breakdown */}
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 flex-1">
+            <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 flex-1">
               <h3 className="text-base font-black text-slate-800 uppercase tracking-wide mb-6">Status ({selectedMonth === 'all' ? 'Geral' : 'do Mês'})</h3>
               <div className="h-48 w-full relative">
                 <ResponsiveContainer width="100%" height="100%">
@@ -319,7 +321,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Distribution by Instructor */}
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6">
             <h3 className="text-base font-black text-slate-800 uppercase tracking-wide mb-6">Distribuição por Instrutor ({selectedMonth === 'all' ? 'Geral' : 'no Mês'})</h3>
             <div className="h-64 w-full">
               {trainingsPerInstructor.length > 0 ? (
@@ -333,6 +335,8 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     />
                     <Bar dataKey="quantidade" radius={[0, 4, 4, 0]} barSize={20}>
+                    <LabelList dataKey="quantidade" position="right" fill="#64748b" fontSize={11} fontWeight="bold" formatter={(value) => value > 0 ? value : ''} />
+
                       {trainingsPerInstructor.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                       ))}
@@ -346,7 +350,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
           </div>
 
           {/* Trainings List */}
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 flex flex-col">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-black text-slate-800 uppercase tracking-wide">
                 {selectedMonth === 'all' ? 'Próximos Agendamentos' : 'Agendamentos do Mês'}
