@@ -26,7 +26,8 @@ import {
   RotateCcw,
   BookOpen,
   Building2,
-  ListFilter
+  ListFilter,
+  Users
 } from 'lucide-react';
 import { formatTimeString } from '../utils/dateUtils';
 

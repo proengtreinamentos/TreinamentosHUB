@@ -258,7 +258,7 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
                     itemStyle={{ color: '#0f172a', fontWeight: 900 }}
                   />
                   <Area type="monotone" dataKey="quantidade" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorTreinamentos)" />
-                    <LabelList dataKey="quantidade" position="top" fill="#2563eb" fontSize={11} fontWeight="bold" formatter={(value) => value > 0 ? value : ''} />
+                    <LabelList dataKey="quantidade" position="top" fill="#2563eb" fontSize={11} fontWeight="bold" formatter={(value: any) => Number(value) > 0 ? value : ''} />
 
                 </AreaChart>
               </ResponsiveContainer>
@@ -321,22 +321,30 @@ export default function Dashboard({ trainings, instructors, locations }: Dashboa
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Distribution by Instructor */}
-          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6">
-            <h3 className="text-base font-black text-slate-800 uppercase tracking-wide mb-6">Distribuição por Instrutor ({selectedMonth === 'all' ? 'Geral' : 'no Mês'})</h3>
-            <div className="h-64 w-full">
+          <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-black text-slate-800 uppercase tracking-wide">
+                Distribuição por Instrutor ({selectedMonth === 'all' ? 'Geral' : 'no Mês'})
+              </h3>
+              {trainingsPerInstructor.length > 0 && (
+                <span className="text-xs font-black text-slate-600 bg-slate-100/90 px-2.5 py-1 rounded-full border border-slate-200">
+                  {trainingsPerInstructor.length} instrutores ativos
+                </span>
+              )}
+            </div>
+            <div className="flex-1 min-h-[350px] w-full">
               {trainingsPerInstructor.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={trainingsPerInstructor} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                  <BarChart data={trainingsPerInstructor} layout="vertical" margin={{ top: 10, right: 35, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                    <XAxis type="number" tickLine={false} axisLine={false} tick={{fill: '#94a3b8', fontSize: 11}} />
-                    <YAxis dataKey="name" type="category" width={110} tickLine={false} axisLine={false} tick={{fill: '#475569', fontSize: 11, fontWeight: 700}} />
+                    <XAxis type="number" tickLine={false} axisLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} domain={[0, 'dataMax + 2']} />
+                    <YAxis dataKey="name" type="category" width={125} tickLine={false} axisLine={false} tick={{fill: '#334155', fontSize: 11.5, fontWeight: 800}} />
                     <Tooltip 
-                      cursor={{fill: '#f8fafc'}}
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      cursor={{fill: '#f1f5f9', opacity: 0.7}}
+                      contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
                     />
-                    <Bar dataKey="quantidade" radius={[0, 4, 4, 0]} barSize={20}>
-                    <LabelList dataKey="quantidade" position="right" fill="#64748b" fontSize={11} fontWeight="bold" formatter={(value) => value > 0 ? value : ''} />
-
+                    <Bar dataKey="quantidade" radius={[0, 5, 5, 0]} barSize={Math.min(26, Math.max(16, Math.floor(260 / Math.max(trainingsPerInstructor.length, 1))))}>
+                      <LabelList dataKey="quantidade" position="right" fill="#1e293b" fontSize={11.5} fontWeight="900" offset={8} formatter={(value: any) => Number(value) > 0 ? value : ''} />
                       {trainingsPerInstructor.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                       ))}

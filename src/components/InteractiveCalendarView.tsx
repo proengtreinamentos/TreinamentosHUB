@@ -115,6 +115,14 @@ export default function InteractiveCalendarView({
     }
     return generateMonthGrid(year, month);
   }, [year, month, currentDate, viewMode]);
+
+  const weeks = useMemo(() => {
+    const res: Array<typeof gridDays> = [];
+    for (let i = 0; i < gridDays.length; i += 7) {
+      res.push(gridDays.slice(i, i + 7));
+    }
+    return res;
+  }, [gridDays]);
   const yearHolidays = useMemo(() => getHolidaysForYear(year), [year]);
 
   const instructorsMap = useMemo(() => new Map<string, Instructor>(instructors.map((i) => [i.id, i])), [instructors]);
@@ -568,179 +576,186 @@ export default function InteractiveCalendarView({
             </div>
           </div>
 
-          {/* Month Days Grid */}
-          <div className="flex-1 grid grid-cols-7 min-h-0 bg-slate-300 gap-[1px] overflow-y-auto custom-scrollbar" style={{ gridAutoRows: "minmax(140px, max-content)" }}>
-            {gridDays.map((cell) => {
-              const dateStr = formatDateString(cell.date);
-              const dayTrainings = trainingsByDate.get(dateStr) || [];
-              const dayNum = cell.date.getDate();
-              const holiday = getHolidayForDate(cell.date);
+          {/* Month Days Grid: Grouped by Week Rows */}
+          <div className="flex-1 min-h-0 bg-slate-300 flex flex-col overflow-y-auto custom-scrollbar gap-[1px]">
+            {weeks.map((week, weekIndex) => (
+              <div 
+                key={weekIndex} 
+                className="grid grid-cols-7 gap-[1px] bg-slate-300 min-h-[140px] flex-shrink-0"
+              >
+                {week.map((cell) => {
+                  const dateStr = formatDateString(cell.date);
+                  const dayTrainings = trainingsByDate.get(dateStr) || [];
+                  const dayNum = cell.date.getDate();
+                  const holiday = getHolidayForDate(cell.date);
 
-              const todayStr = formatDateString(new Date());
-              const isToday = dateStr === todayStr;
-              const isPast = cell.date.getTime() < new Date().setHours(0, 0, 0, 0) && !isToday;
+                  const todayStr = formatDateString(new Date());
+                  const isToday = dateStr === todayStr;
+                  const isPast = cell.date.getTime() < new Date().setHours(0, 0, 0, 0) && !isToday;
 
-              let dayLabel = `${dayNum}`;
-              if (dayNum === 1) {
-                const monthShortName = MONTHS_PT[cell.date.getMonth()].substring(0, 3).toLowerCase();
-                dayLabel = `1 ${monthShortName}.`;
-              }
+                  let dayLabel = `${dayNum}`;
+                  if (dayNum === 1) {
+                    const monthShortName = MONTHS_PT[cell.date.getMonth()].substring(0, 3).toLowerCase();
+                    dayLabel = `1 ${monthShortName}.`;
+                  }
 
-              return (
-                <div
-                  key={cell.key}
-                  onClick={() => handleOpenNewForDate(dateStr)}
-                  className={`p-1.5 flex flex-col gap-1 transition-all cursor-pointer relative group border-r border-b border-slate-300/80 ${
-                    !cell.isCurrentMonth
-                      ? 'bg-slate-100/80 text-slate-400 opacity-40 grayscale-[25%] hover:opacity-90 hover:grayscale-0'
-                      : isPast
-                      ? 'bg-[#f8fafc] text-slate-500 opacity-60 grayscale-[30%] hover:opacity-90 hover:grayscale-0'
-                      : isToday
-                      ? 'bg-blue-50/50 ring-2 ring-inset ring-blue-500 hover:bg-blue-100/50 z-10 shadow-sm'
-                      : holiday
-                      ? 'bg-amber-50/60 hover:bg-amber-100/70'
-                      : 'bg-[#f8fafc] text-slate-800 hover:bg-blue-50/70'
-                  }`}
-                >
-                  {/* Top Day Number Header */}
-                  <div className="flex items-center justify-between mb-0.5">
-                    <div className="flex items-center gap-1 min-w-0">
-                      <span className={`text-xs sm:text-sm font-extrabold select-none flex items-center justify-center ${
-                        isToday 
-                          ? 'h-6 w-6 rounded-full bg-blue-600 text-white shadow-sm'
-                          : holiday 
-                          ? 'text-red-700 font-black' 
-                          : cell.isCurrentMonth ? 'text-slate-800' : 'text-slate-400'
-                      }`}>
-                        {dayLabel}
-                      </span>
+                  return (
+                    <div
+                      key={cell.key}
+                      onClick={() => handleOpenNewForDate(dateStr)}
+                      className={`min-h-[140px] p-2 flex flex-col gap-1.5 transition-all cursor-pointer relative group ${
+                        !cell.isCurrentMonth
+                          ? 'bg-slate-100/80 text-slate-400 opacity-40 grayscale-[25%] hover:opacity-90 hover:grayscale-0'
+                          : isPast
+                          ? 'bg-[#f8fafc] text-slate-500 opacity-60 grayscale-[30%] hover:opacity-90 hover:grayscale-0'
+                          : isToday
+                          ? 'bg-blue-50/50 ring-2 ring-inset ring-blue-500 hover:bg-blue-100/50 z-10 shadow-sm'
+                          : holiday
+                          ? 'bg-amber-50/60 hover:bg-amber-100/70'
+                          : 'bg-[#f8fafc] text-slate-800 hover:bg-blue-50/70'
+                      }`}
+                    >
+                      {/* Top Day Number Header */}
+                      <div className="flex items-center justify-between mb-0.5">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className={`text-xs sm:text-sm font-extrabold select-none flex items-center justify-center ${
+                            isToday 
+                              ? 'h-6 w-6 rounded-full bg-blue-600 text-white shadow-sm'
+                              : holiday 
+                              ? 'text-red-700 font-black' 
+                              : cell.isCurrentMonth ? 'text-slate-800' : 'text-slate-400'
+                          }`}>
+                            {dayLabel}
+                          </span>
+                          {holiday && (
+                            <span 
+                              className={`inline-flex items-center px-1 py-0.2 rounded text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-tight truncate max-w-[120px] ${
+                                holiday.type === 'municipal' 
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                                  : 'bg-red-100 text-red-800 border border-red-200'
+                              }`} 
+                              title={holiday.name}
+                            >
+                              {holiday.type === 'municipal' ? 'Feriado Municipal' : 'Feriado'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Plus Icon on Hover */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenNewForDate(dateStr);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-opacity"
+                          title="Adicionar evento"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+
+                      {/* Holiday Indicator Banner */}
                       {holiday && (
-                        <span 
-                          className={`inline-flex items-center px-1 py-0.2 rounded text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-tight truncate max-w-[120px] ${
-                            holiday.type === 'municipal' 
-                              ? 'bg-amber-100 text-amber-900 border border-amber-300' 
-                              : 'bg-red-100 text-red-800 border border-red-200'
-                          }`} 
+                        <div 
+                          className={`rounded px-1.5 py-1 text-[9.5px] sm:text-[10px] font-bold flex items-center gap-1.5 border shadow-2xs ${
+                            holiday.type === 'municipal'
+                              ? 'bg-amber-100/95 text-amber-950 border-amber-300'
+                              : 'bg-red-100/95 text-red-950 border-red-200'
+                          }`}
                           title={holiday.name}
                         >
-                          {holiday.type === 'municipal' ? 'Feriado Municipal' : 'Feriado'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Plus Icon on Hover */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenNewForDate(dateStr);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-opacity"
-                      title="Adicionar evento"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                  </div>
-
-                  {/* Holiday Indicator Banner */}
-                  {holiday && (
-                    <div 
-                      className={`rounded px-1.5 py-1 text-[9.5px] sm:text-[10px] font-bold flex items-center gap-1.5 border shadow-2xs ${
-                        holiday.type === 'municipal'
-                          ? 'bg-amber-100/95 text-amber-950 border-amber-300'
-                          : 'bg-red-100/95 text-red-950 border-red-200'
-                      }`}
-                      title={holiday.name}
-                    >
-                      <span className="text-[11px] leading-none flex-shrink-0">🎉</span>
-                      <span className="truncate font-black">{holiday.name}</span>
-                    </div>
-                  )}
-
-                  {/* List of Detailed Training Cards */}
-                  <div className="flex flex-col gap-1.5 pr-0.5 mt-1">
-                    {dayTrainings.map((t) => {
-                      const inst = instructorsMap.get(t.instructorId);
-                      const loc = locationsMap.get(t.locationId);
-
-                      // Determine color matching instructor or custom selection
-                      const instColor = t.customColor || inst?.color || '#3b82f6';
-                      const timeStr = formatTimeString(t.startDate) || '08:00';
-                      const isCanceled = t.status === 'cancelado';
-
-                      // Helper to convert hex to rgba tint for card background and border
-                      const getLightTint = (hex: string, alpha: number) => {
-                        if (!hex || !hex.startsWith('#') || hex.length !== 7) return `rgba(59, 130, 246, ${alpha})`;
-                        const r = parseInt(hex.slice(1, 3), 16);
-                        const g = parseInt(hex.slice(3, 5), 16);
-                        const b = parseInt(hex.slice(5, 7), 16);
-                        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                      };
-
-                      const cardBg = isCanceled ? '#f8fafc' : getLightTint(instColor, 0.12);
-                      const cardBorderColor = isCanceled ? '#e2e8f0' : getLightTint(instColor, 0.35);
-
-                      return (
-                        <div
-                          key={t.id}
-                          onClick={(e) => handleOpenEditTraining(t, e)}
-                          style={{ 
-                            backgroundColor: cardBg,
-                            borderColor: cardBorderColor,
-                            borderLeftColor: isCanceled ? '#cbd5e1' : instColor 
-                          }}
-                          className={`rounded-r-lg px-2 py-1.5 text-2xs ${
-                            isCanceled 
-                              ? 'border-l-[5px] border-dashed border-slate-300' 
-                              : 'border-l-[5px]'
-                          } border-y border-r shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-1 group/card hover:translate-x-0.5 select-none`}
-                          title={`${t.title} - ${inst?.name || ''} (${loc?.name || ''}) - Clique para editar`}
-                        >
-                          {/* Row 1: Time Pill Badge + Title */}
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span 
-                              style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
-                              className="px-1.5 py-0.5 rounded text-[10px] sm:text-[10.5px] font-black text-white tracking-tight flex-shrink-0 shadow-2xs"
-                            >
-                              {timeStr}
-                            </span>
-                            <span className={`truncate font-black text-[11px] sm:text-[12px] leading-tight flex-1 ${
-                              isCanceled ? 'line-through text-slate-400' : 'text-slate-900'
-                            }`}>
-                              {t.title}
-                            </span>
-                            {t.attendeeCount && t.attendeeCount > 0 && (
-                              <span className="flex-shrink-0 bg-slate-200 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-300 shadow-2xs" title={`${t.attendeeCount} alunos cadastrados`}>
-                                {t.attendeeCount}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Row 2: Location & Instructor in a Single Line */}
-                          <div className="flex items-center gap-1.5 text-[9.5px] sm:text-[10px] font-bold text-slate-800 truncate min-w-0 leading-tight pt-0.5">
-                            {/* Location */}
-                            <span className="flex items-center gap-0.5 truncate flex-shrink min-w-0 text-slate-600">
-                              <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-slate-500" />
-                              <span className="truncate">{loc?.name || 'Local N/A'}</span>
-                            </span>
-
-                            <span className="text-slate-400 font-semibold flex-shrink-0">•</span>
-
-                            {/* Instructor */}
-                            <span className="flex items-center gap-1 truncate flex-shrink min-w-0 font-extrabold text-slate-900">
-                              <div 
-                                className="h-2 w-2 rounded-full flex-shrink-0 shadow-2xs" 
-                                style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
-                              />
-                              <span className="truncate">{inst?.name || 'Instrutor N/A'}</span>
-                            </span>
-                          </div>
+                          <span className="text-[11px] leading-none flex-shrink-0">🎉</span>
+                          <span className="truncate font-black">{holiday.name}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                      )}
+
+                      {/* List of Detailed Training Cards */}
+                      <div className="flex flex-col gap-1.5 pr-0.5 mt-0.5">
+                        {dayTrainings.map((t) => {
+                          const inst = instructorsMap.get(t.instructorId);
+                          const loc = locationsMap.get(t.locationId);
+
+                          // Determine color matching instructor or custom selection
+                          const instColor = t.customColor || inst?.color || '#3b82f6';
+                          const timeStr = formatTimeString(t.startDate) || '08:00';
+                          const isCanceled = t.status === 'cancelado';
+
+                          // Helper to convert hex to rgba tint for card background and border
+                          const getLightTint = (hex: string, alpha: number) => {
+                            if (!hex || !hex.startsWith('#') || hex.length !== 7) return `rgba(59, 130, 246, ${alpha})`;
+                            const r = parseInt(hex.slice(1, 3), 16);
+                            const g = parseInt(hex.slice(3, 5), 16);
+                            const b = parseInt(hex.slice(5, 7), 16);
+                            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                          };
+
+                          const cardBg = isCanceled ? '#f8fafc' : getLightTint(instColor, 0.12);
+                          const cardBorderColor = isCanceled ? '#e2e8f0' : getLightTint(instColor, 0.35);
+
+                          return (
+                            <div
+                              key={t.id}
+                              onClick={(e) => handleOpenEditTraining(t, e)}
+                              style={{ 
+                                backgroundColor: cardBg,
+                                borderColor: cardBorderColor,
+                                borderLeftColor: isCanceled ? '#cbd5e1' : instColor 
+                              }}
+                              className={`rounded-r-lg px-2.5 py-1.5 text-2xs ${
+                                isCanceled 
+                                  ? 'border-l-[5px] border-dashed border-slate-300' 
+                                  : 'border-l-[5px]'
+                              } border-y border-r shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-1 group/card hover:translate-x-0.5 select-none`}
+                              title={`${t.title} - ${inst?.name || ''} (${loc?.name || ''}) - Clique para editar`}
+                            >
+                              {/* Row 1: Time Pill Badge + Title */}
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span 
+                                  style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
+                                  className="px-1.5 py-0.5 rounded text-[10px] sm:text-[10.5px] font-black text-white tracking-tight flex-shrink-0 shadow-2xs"
+                                >
+                                  {timeStr}
+                                </span>
+                                <span className={`truncate font-black text-[11px] sm:text-[12px] leading-tight flex-1 ${
+                                  isCanceled ? 'line-through text-slate-400' : 'text-slate-900'
+                                }`}>
+                                  {t.title}
+                                </span>
+                                {t.attendeeCount && t.attendeeCount > 0 && (
+                                  <span className="flex-shrink-0 bg-slate-200 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-300 shadow-2xs" title={`${t.attendeeCount} alunos cadastrados`}>
+                                    {t.attendeeCount}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Row 2: Location & Instructor in a Single Line */}
+                              <div className="flex items-center gap-1.5 text-[9.5px] sm:text-[10px] font-bold text-slate-800 truncate min-w-0 leading-tight pt-0.5">
+                                {/* Location */}
+                                <span className="flex items-center gap-0.5 truncate flex-shrink min-w-0 text-slate-600">
+                                  <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-slate-500" />
+                                  <span className="truncate">{loc?.name || 'Local N/A'}</span>
+                                </span>
+
+                                <span className="text-slate-400 font-semibold flex-shrink-0">•</span>
+
+                                {/* Instructor */}
+                                <span className="flex items-center gap-1 truncate flex-shrink min-w-0 font-extrabold text-slate-900">
+                                  <div 
+                                    className="h-2 w-2 rounded-full flex-shrink-0 shadow-2xs" 
+                                    style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
+                                  />
+                                  <span className="truncate">{inst?.name || 'Instrutor N/A'}</span>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
 
         </div>
