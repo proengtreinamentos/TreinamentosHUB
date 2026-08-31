@@ -572,7 +572,7 @@ export default function InteractiveCalendarView({
           </div>
 
           {/* Month Days Grid */}
-          <div className="flex-1 grid grid-cols-7 auto-rows-fr bg-slate-300 gap-[1px]">
+          <div className="flex-1 grid grid-cols-7 auto-rows-[minmax(140px,1fr)] bg-slate-300 gap-[1px] overflow-y-auto custom-scrollbar">
             {gridDays.map((cell) => {
               const dateStr = formatDateString(cell.date);
               const dayTrainings = trainingsByDate.get(dateStr) || [];
@@ -706,11 +706,16 @@ export default function InteractiveCalendarView({
                             >
                               {timeStr}
                             </span>
-                            <span className={`truncate font-black text-[11px] sm:text-[12px] leading-tight ${
+                            <span className={`truncate font-black text-[11px] sm:text-[12px] leading-tight flex-1 ${
                               isCanceled ? 'line-through text-slate-400' : 'text-slate-900'
                             }`}>
                               {t.title}
                             </span>
+                            {t.attendeeCount && t.attendeeCount > 0 && (
+                              <span className="flex-shrink-0 bg-slate-200 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-300 shadow-2xs" title={`${t.attendeeCount} alunos cadastrados`}>
+                                {t.attendeeCount}
+                              </span>
+                            )}
                           </div>
 
                           {/* Row 2: Location & Instructor in a Single Line */}

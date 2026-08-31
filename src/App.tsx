@@ -166,20 +166,7 @@ export default function App() {
       const dbInstructors = await dbGetInstructors(INITIAL_INSTRUCTORS);
       
       // Map exact colors from image by instructor name
-      const imageColorsMap: Record<string, string> = {
-        'admir ventura': '#f24e1e',
-        'alexandre rivellino': '#0b41cd',
-        'jaqueline daiane': '#008b8b',
-        'leandro manha': '#6b21a8',
-        'naiara cristina': '#e5a000',
-        'thiago anjos': '#18181b',
-      };
-
-      const rawFiltered = dbInstructors
-        .map((inst) => {
-          const matched = imageColorsMap[inst.name.trim().toLowerCase()];
-          return matched ? { ...inst, color: matched } : inst;
-        });
+      const rawFiltered = dbInstructors;
 
       // Deduplicate strictly by normalized instructor name
       const uniqueNameMap = new Map<string, Instructor>();
@@ -560,6 +547,7 @@ export default function App() {
     const newDate = new Date(currentDate);
 
     if (calendarView === 'month') {
+      newDate.setDate(1); // Set to 1st to prevent month skipping
       newDate.setMonth(currentDate.getMonth() + offset);
     } else if (calendarView === 'week') {
       newDate.setDate(currentDate.getDate() + offset * 7);
