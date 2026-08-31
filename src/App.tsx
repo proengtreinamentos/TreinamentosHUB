@@ -668,11 +668,11 @@ export default function App() {
               onOpenAddModal={(date) => {
                 setEditingTraining(null);
                 setModalDefaultDate(date);
-                setActiveModal('training');
+                React.startTransition(() => { setActiveModal('training'); });
               }}
               onOpenEditModal={(training) => {
                 setEditingTraining(training);
-                setActiveModal('training');
+                React.startTransition(() => { setActiveModal('training'); });
               }}
             />
           )}
@@ -683,11 +683,11 @@ export default function App() {
             trainings={trainings}
             onAddInstructorClick={() => {
               setEditingInstructor(null);
-              setActiveModal('instructor');
+              React.startTransition(() => { setActiveModal('instructor'); });
             }}
             onEditInstructorClick={(inst) => {
               setEditingInstructor(inst);
-              setActiveModal('instructor');
+              React.startTransition(() => { setActiveModal('instructor'); });
             }}
             onDeleteInstructor={handleDeleteInstructorTrigger}
           />
@@ -699,11 +699,11 @@ export default function App() {
             trainings={trainings}
             onAddLocationClick={() => {
               setEditingLocation(null);
-              setActiveModal('location');
+              React.startTransition(() => { setActiveModal('location'); });
             }}
             onEditLocationClick={(loc) => {
               setEditingLocation(loc);
-              setActiveModal('location');
+              React.startTransition(() => { setActiveModal('location'); });
             }}
             onDeleteLocation={handleDeleteLocationTrigger}
           />
@@ -717,11 +717,11 @@ export default function App() {
             onAddTrainingClick={() => {
               setEditingTraining(null);
               setModalDefaultDate(formatDateString(currentDate));
-              setActiveModal('training');
+              React.startTransition(() => { setActiveModal('training'); });
             }}
             onEditTrainingClick={(t) => {
               setEditingTraining(t);
-              setActiveModal('training');
+              React.startTransition(() => { setActiveModal('training'); });
             }}
             onDuplicateTraining={handleDuplicateTraining}
             onDeleteTraining={handleDeleteTrainingTrigger}
@@ -753,7 +753,7 @@ export default function App() {
       <InstructorModal
         isOpen={activeModal === 'instructor'}
         onClose={() => {
-          setActiveModal(null);
+          React.startTransition(() => { setActiveModal(null); });
           setEditingInstructor(null);
         }}
         onSave={handleSaveInstructor}
@@ -764,7 +764,7 @@ export default function App() {
       <LocationModal
         isOpen={activeModal === 'location'}
         onClose={() => {
-          setActiveModal(null);
+          React.startTransition(() => { setActiveModal(null); });
           setEditingLocation(null);
         }}
         onSave={handleSaveLocation}
@@ -775,7 +775,7 @@ export default function App() {
       <TrainingModal
         isOpen={activeModal === 'training'}
         onClose={() => {
-          setActiveModal(null);
+          React.startTransition(() => { setActiveModal(null); });
           setEditingTraining(null);
           setModalDefaultDate(undefined);
         }}

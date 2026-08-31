@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Training, Instructor, Location } from '../types';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area,
+  PieChart, Pie, Cell, AreaChart, Area, LabelList,
 } from 'recharts';
 import { MONTHS_PT } from '../utils/dateUtils';
 import { Users, GraduationCap, MapPin, CalendarCheck, TrendingUp, CheckCircle, AlertTriangle, User, Clock } from 'lucide-react';

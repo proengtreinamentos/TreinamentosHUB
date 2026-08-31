@@ -78,8 +78,10 @@ export default function MainSidebar({
   ];
 
   const handleSelect = (tab: TabType) => {
-    setActiveTab(tab);
-    setIsMobileOpen(false);
+    React.startTransition(() => {
+      setActiveTab(tab);
+      setIsMobileOpen(false);
+    });
   };
 
   return (

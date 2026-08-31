@@ -36,7 +36,7 @@ interface InteractiveCalendarViewProps {
   onSyncRequested?: () => Promise<void>;
   viewMode?: 'month' | 'week';
   onViewModeChange?: (mode: 'month' | 'week') => void;
-  onOpenAddModal: (date: Date) => void;
+  onOpenAddModal: (dateStr: string) => void;
   onOpenEditModal: (training: Training) => void;
 }
 
@@ -150,10 +150,7 @@ export default function InteractiveCalendarView({
 
   // Open modal for creating new training on a specific date string (YYYY-MM-DD)
   const handleOpenNewForDate = (dateStr: string) => {
-    // Parse dateStr (e.g. 2026-08-26) local time
-    const [year, month, day] = dateStr.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    onOpenAddModal(date);
+    onOpenAddModal(dateStr);
   };
 
   // Open modal for editing existing training
@@ -321,7 +318,7 @@ export default function InteractiveCalendarView({
             )}
 
             <button
-              onClick={() => handleOpenNewForDate(formatDateString(new Date()))}
+              onClick={() => handleOpenNewForDate(formatDateString(currentDate))}
               className="ml-1 flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-black px-3.5 py-2 rounded-lg shadow-md transition-all cursor-pointer uppercase tracking-wider"
             >
               <Plus className="h-4 w-4 stroke-[3]" />
@@ -572,7 +569,7 @@ export default function InteractiveCalendarView({
           </div>
 
           {/* Month Days Grid */}
-          <div className="flex-1 grid grid-cols-7 auto-rows-[minmax(140px,1fr)] min-h-0 bg-slate-300 gap-[1px] overflow-y-auto custom-scrollbar">
+          <div className="flex-1 grid grid-cols-7 auto-rows-[minmax(140px,auto)] min-h-0 bg-slate-300 gap-[1px] overflow-y-auto custom-scrollbar">
             {gridDays.map((cell) => {
               const dateStr = formatDateString(cell.date);
               const dayTrainings = trainingsByDate.get(dateStr) || [];
@@ -593,7 +590,7 @@ export default function InteractiveCalendarView({
                 <div
                   key={cell.key}
                   onClick={() => handleOpenNewForDate(dateStr)}
-                  className={`min-h-[120px] sm:min-h-[145px] p-1.5 flex flex-col gap-1 transition-all cursor-pointer relative group border-r border-b border-slate-300/80 ${
+                  className={`min-h-[140px] p-1.5 flex flex-col gap-1 transition-all cursor-pointer relative group border-r border-b border-slate-300/80 ${
                     !cell.isCurrentMonth
                       ? 'bg-slate-100/80 text-slate-400 opacity-40 grayscale-[25%] hover:opacity-90 hover:grayscale-0'
                       : isPast
@@ -660,7 +657,7 @@ export default function InteractiveCalendarView({
                   )}
 
                   {/* List of Detailed Training Cards */}
-                  <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto min-h-0 pr-0.5 scrollbar-thin">
+                  <div className="flex flex-col gap-1.5 pr-0.5 mt-1">
                     {dayTrainings.map((t) => {
                       const inst = instructorsMap.get(t.instructorId);
                       const loc = locationsMap.get(t.locationId);

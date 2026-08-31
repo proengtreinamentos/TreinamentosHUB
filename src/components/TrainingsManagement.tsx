@@ -147,7 +147,7 @@ export default function TrainingsManagement({
 
     if (targetList.length === 0) return;
 
-    const headers = ['Titulo', 'Instrutor', 'Especialidade', 'Local', 'Tipo Local', 'Data Inicio', 'Hora Inicio', 'Hora Termino', 'Status', 'Descricao'];
+    const headers = ['Titulo', 'Instrutor', 'Especialidade', 'Local', 'Tipo Local', 'Data Inicio', 'Hora Inicio', 'Hora Termino', 'Participantes', 'Status', 'Descricao'];
     
     const rows = targetList.map((t) => {
       const inst = instructorsMap.get(t.instructorId);
@@ -516,6 +516,7 @@ export default function TrainingsManagement({
                   <th className="px-5 py-3.5">Cronograma & Duração</th>
                   <th className="px-5 py-3.5">Instrutor</th>
                   <th className="px-5 py-3.5">Local / Ambiente</th>
+                  <th className="px-5 py-3.5">Participantes</th>
                   <th className="px-5 py-3.5">Status</th>
                   <th className="px-5 py-3.5 text-right">Ações</th>
                 </tr>
@@ -622,6 +623,17 @@ export default function TrainingsManagement({
                         )}
                       </td>
 
+                      {/* Participantes */}
+                      <td className="px-5 py-4 whitespace-nowrap text-center text-sm font-medium text-slate-700">
+                        {t.attendeeCount ? (
+                          <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-0.5 rounded-md border border-slate-200">
+                            <Users className="h-3.5 w-3.5 text-slate-400" />
+                            {t.attendeeCount}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </td>
                       {/* Status */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         {renderStatusBadge(t.status)}
