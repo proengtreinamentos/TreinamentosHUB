@@ -202,7 +202,7 @@ export default function InteractiveCalendarView({
   return (
     <div 
       ref={calendarContainerRef}
-      className={`flex-1 flex flex-col bg-[#030e21] text-slate-100 relative font-sans transition-all duration-150 ${
+      className={`flex-1 flex flex-col min-h-0 bg-[#030e21] text-slate-100 relative font-sans transition-all duration-150 ${
         isFullscreen 
           ? 'fixed inset-0 z-[100] w-screen h-screen rounded-none p-4 sm:p-6 overflow-y-auto' 
           : 'rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-800/90 overflow-hidden'
@@ -358,7 +358,7 @@ export default function InteractiveCalendarView({
       {/* ============================================================ */}
       {/* MAIN CONTENT AREA: LEFT PANEL + CALENDAR GRID               */}
       {/* ============================================================ */}
-      <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-5">
+      <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-5 min-h-0">
         
         {/* LEFT PANEL: INSTRUTORES + ESTATÍSTICAS + DESTAQUE (Hidden in Fullscreen Mode) */}
         {!isFullscreen && (
@@ -544,7 +544,7 @@ export default function InteractiveCalendarView({
         )}
 
         {/* RIGHT AREA: CALENDAR GRID */}
-        <div className="flex-1 flex flex-col bg-white border-2 border-slate-300 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="flex-1 flex flex-col min-h-0 bg-white border-2 border-slate-300 rounded-2xl overflow-hidden shadow-2xl">
           
           {/* Weekday Header (DOM, SEG, TER, QUA, QUI, SEX, SÁB) */}
           <div className="grid grid-cols-7 bg-[#001130] border-b-2 border-slate-800">
@@ -572,7 +572,7 @@ export default function InteractiveCalendarView({
           </div>
 
           {/* Month Days Grid */}
-          <div className="flex-1 grid grid-cols-7 auto-rows-[minmax(140px,1fr)] bg-slate-300 gap-[1px] overflow-y-auto custom-scrollbar">
+          <div className="flex-1 grid grid-cols-7 auto-rows-[minmax(140px,1fr)] min-h-0 bg-slate-300 gap-[1px] overflow-y-auto custom-scrollbar">
             {gridDays.map((cell) => {
               const dateStr = formatDateString(cell.date);
               const dayTrainings = trainingsByDate.get(dateStr) || [];

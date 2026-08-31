@@ -554,28 +554,34 @@ export default function App() {
     } else {
       newDate.setDate(currentDate.getDate() + offset);
     }
-    setCurrentDate(newDate);
+    React.startTransition(() => { setCurrentDate(newDate); });
   };
 
   // ----------------------------------------------------
   // FILTER TRIGGERS
   // ----------------------------------------------------
   const handleToggleStatus = (status: TrainingStatus) => {
-    setSelectedStatuses((prev) =>
-      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
-    );
+    React.startTransition(() => {
+      setSelectedStatuses((prev) =>
+        prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
+      );
+    });
   };
 
   const handleToggleInstructor = (id: string) => {
-    setSelectedInstructorIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
+    React.startTransition(() => {
+      setSelectedInstructorIds((prev) =>
+        prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+      );
+    });
   };
 
   const handleToggleLocation = (id: string) => {
-    setSelectedLocationIds((prev) =>
-      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
-    );
+    React.startTransition(() => {
+      setSelectedLocationIds((prev) =>
+        prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
+      );
+    });
   };
 
   // ----------------------------------------------------
@@ -617,7 +623,7 @@ export default function App() {
       />
 
       {/* Main Right Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         
         {/* Mobile Top Header with Hamburger Menu Toggle */}
         <header className="md:hidden sticky top-0 z-30 bg-[#001130] text-white px-4 py-3 shadow-md flex items-center justify-between border-b border-slate-800 print:hidden">
@@ -648,7 +654,7 @@ export default function App() {
         </header>
 
         {/* 🚀 Tab View Routing */}
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {activeTab === 'interativo' && (
             <InteractiveCalendarView
               currentDate={currentDate}
