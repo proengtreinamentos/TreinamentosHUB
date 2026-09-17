@@ -34,4 +34,5 @@ export interface Training {
   description?: string;
   customColor?: string; // Optional custom color override (hex or Tailwind)
   attendeeCount?: number; // Number of attendees
+  protheusLaunched?: boolean; // Flag indicating if training was registered in Protheus system
 }

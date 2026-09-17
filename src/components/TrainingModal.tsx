@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Training, Instructor, Location, TrainingStatus } from '../types';
-import { X, Calendar, Clock, User, MapPin, AlignLeft, Info, Trash2 } from 'lucide-react';
+import { X, Calendar, Clock, User, MapPin, AlignLeft, Info, Trash2, CheckCircle2 } from 'lucide-react';
+import ProtheusToggle from './ProtheusToggle';
 
 interface TrainingModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export default function TrainingModal({
   const [endTime, setEndTime] = useState('17:00');
   const [status, setStatus] = useState<TrainingStatus>('confirmado');
   const [attendeeCount, setAttendeeCount] = useState<number | ''>('');
+  const [protheusLaunched, setProtheusLaunched] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export default function TrainingModal({
         
         setStatus(training.status);
         setAttendeeCount(training.attendeeCount ?? '');
+        setProtheusLaunched(Boolean(training.protheusLaunched));
       } else {
         if (titleRef.current) titleRef.current.value = '';
         if (descriptionRef.current) descriptionRef.current.value = '';
@@ -73,6 +76,7 @@ export default function TrainingModal({
         
         setStatus('confirmado');
         setAttendeeCount('');
+        setProtheusLaunched(false);
       }
       setError('');
     }
@@ -131,6 +135,7 @@ export default function TrainingModal({
       status,
       description: descriptionRef.current?.value.trim() || undefined,
       attendeeCount: attendeeCount === '' ? undefined : Number(attendeeCount),
+      protheusLaunched,
     });
     onClose();
   };
@@ -333,21 +338,43 @@ export default function TrainingModal({
               </div>
             </div>
 
-            {/* Participantes */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
-                <User className="h-4 w-4 text-slate-400" />
-                Quantidade de Participantes (Opcional)
-              </label>
-              <input
-                id="training-attendee-count-input"
-                type="number"
-                min="0"
-                value={attendeeCount}
-                onChange={(e) => setAttendeeCount(e.target.value === '' ? '' : Number(e.target.value))}
-                placeholder="Ex: 20"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all bg-white"
-              />
+            {/* Participantes e Lançamento no Protheus */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Participantes */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
+                  <User className="h-4 w-4 text-slate-400" />
+                  Quantidade de Participantes (Opcional)
+                </label>
+                <input
+                  id="training-attendee-count-input"
+                  type="number"
+                  min="0"
+                  value={attendeeCount}
+                  onChange={(e) => setAttendeeCount(e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="Ex: 20"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all bg-white"
+                />
+              </div>
+
+              {/* Lançamento no Protheus */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  Lançamento no Sistema (Protheus)
+                </label>
+                <div className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-slate-50/70 h-[38px]">
+                  <span className={`text-xs font-bold ${protheusLaunched ? 'text-emerald-700' : 'text-slate-500'}`}>
+                    {protheusLaunched ? 'Sim (Lançado)' : 'Não (Pendente)'}
+                  </span>
+                  <ProtheusToggle
+                    id="training-protheus-toggle"
+                    checked={protheusLaunched}
+                    onChange={setProtheusLaunched}
+                    size="sm"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Descrição */}

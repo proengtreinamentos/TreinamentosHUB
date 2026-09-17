@@ -24,8 +24,10 @@ import {
   Maximize2,
   Minimize2,
   BarChart3,
-  CheckCircle2
+  CheckCircle2,
+  PanelLeft
 } from 'lucide-react';
+import ProtheusToggle from './ProtheusToggle';
 
 interface InteractiveCalendarViewProps {
   currentDate: Date;
@@ -66,7 +68,7 @@ export default function InteractiveCalendarView({
 }: InteractiveCalendarViewProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // Removed local viewMode state
+  const [showSidebar, setShowSidebar] = useState(true);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
 
   const toggleFullscreen = () => {
@@ -209,8 +211,8 @@ export default function InteractiveCalendarView({
       ref={calendarContainerRef}
       className={`flex-1 flex flex-col min-h-0 bg-[#030e21] text-slate-100 relative font-sans transition-all duration-150 ${
         isFullscreen 
-          ? 'fixed inset-0 z-[100] w-screen h-screen rounded-none p-4 sm:p-6 overflow-y-auto' 
-          : 'rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-800/90 overflow-hidden'
+          ? 'fixed inset-0 z-[100] w-screen h-screen rounded-none p-3 sm:p-4 md:p-5 overflow-hidden' 
+          : 'h-full rounded-2xl md:rounded-3xl p-3 sm:p-4 md:p-5 shadow-2xl border border-slate-800/90 overflow-hidden'
       }`}
     >
       
@@ -227,74 +229,89 @@ export default function InteractiveCalendarView({
       {/* ============================================================ */}
       {/* HEADER BANNER: PROENG TEXT + AGENDA MONTH TITLE + CONTROLS    */}
       {/* ============================================================ */}
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-800/80 mb-5">
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-800/80 mb-3 flex-shrink-0">
         
         {/* Left: Brand Text & Title Block */}
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-3 sm:gap-5">
           {/* Clean PROENG Text */}
           <div className="flex items-center">
-            <span className="text-3xl sm:text-4xl font-black italic tracking-tighter text-white drop-shadow-md">
+            <span className="text-2xl sm:text-3xl font-black italic tracking-tighter text-white drop-shadow-md">
               PRO<span className="text-red-600">ENG</span>
             </span>
           </div>
 
-          <div className="h-10 w-[2px] bg-slate-700/80 hidden sm:block" />
+          <div className="h-8 w-[2px] bg-slate-700/80 hidden sm:block" />
 
           {/* Title Header */}
           <div className="flex flex-col">
-            <p className="text-[11px] font-black tracking-widest text-slate-300 uppercase">
+            <p className="text-[10px] sm:text-[11px] font-black tracking-widest text-slate-300 uppercase">
               GESTÃO DE TREINAMENTOS PROENG
             </p>
             <div className="flex items-baseline gap-2">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-red-600 uppercase drop-shadow-sm">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-red-600 uppercase drop-shadow-sm">
                 {monthNameUpper}
               </h1>
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-white">
                 {year}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Center: Title Text (no card, larger font) */}
-        <div className="hidden lg:flex flex-col text-center">
-          <p className="text-base sm:text-lg font-black text-white tracking-wider uppercase drop-shadow-xs">
-            GESTÃO DE TREINAMENTOS
+        {/* Center: Title Text */}
+        <div className="hidden xl:flex flex-col text-center">
+          <p className="text-sm font-black text-slate-200 tracking-wider uppercase">
+            CALENDÁRIO DE TREINAMENTOS
           </p>
         </div>
 
         {/* Right: Quick Controls & Standalone Fullscreen Button */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           {/* Navigation & Sync Actions Bar */}
-          <div className="flex items-center gap-2 bg-[#0a1c38] p-1.5 rounded-xl border border-slate-700/80">
+          <div className="flex items-center gap-1.5 bg-[#0a1c38] p-1 rounded-xl border border-slate-700/80">
+            {/* Sidebar Toggle Button */}
+            <button
+              onClick={() => setShowSidebar(!showSidebar)}
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                showSidebar 
+                  ? 'bg-blue-600 text-white shadow-xs' 
+                  : 'bg-[#11284d] text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+              title={showSidebar ? 'Ocultar painel lateral' : 'Exibir painel lateral (Instrutores/Locais/Estatísticas)'}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
+
+            <div className="h-5 w-[1px] bg-slate-700 mx-0.5" />
+
             <button
               onClick={() => onNavigate('prev')}
-              className="p-2 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
               title="Mês Anterior"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => onNavigate('today')}
-              className="px-3 py-1.5 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
             >
               Hoje
             </button>
             <button
               onClick={() => onNavigate('next')}
-              className="p-2 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-[#11284d] text-slate-200 hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
               title="Próximo"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
             
             {/* View Mode Toggle */}
-            <div className="flex bg-[#11284d] rounded-lg p-1 ml-2">
+            <div className="flex bg-[#11284d] rounded-lg p-0.5 ml-1">
               <button
                 onClick={() => onViewModeChange && onViewModeChange('month')}
-                className={`px-3 py-1 rounded text-xs font-bold uppercase transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded text-xs font-bold uppercase transition-colors cursor-pointer ${
                   viewMode === 'month' 
-                    ? 'bg-blue-600 text-white shadow-sm' 
+                    ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -302,9 +319,9 @@ export default function InteractiveCalendarView({
               </button>
               <button
                 onClick={() => onViewModeChange && onViewModeChange('week')}
-                className={`px-3 py-1 rounded text-xs font-bold uppercase transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 rounded text-xs font-bold uppercase transition-colors cursor-pointer ${
                   viewMode === 'week' 
-                    ? 'bg-blue-600 text-white shadow-sm' 
+                    ? 'bg-blue-600 text-white shadow-xs' 
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -317,27 +334,27 @@ export default function InteractiveCalendarView({
               <button
                 onClick={handleManualSync}
                 disabled={isSyncing}
-                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-black px-3 py-2 rounded-lg shadow-md transition-all cursor-pointer uppercase tracking-wider disabled:opacity-50"
-                title="Baixar dados mais recentes do Supabase (Pull)"
+                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow-sm transition-all cursor-pointer uppercase tracking-wider disabled:opacity-50"
+                title="Sincronizar com banco de dados"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+                <span className="hidden md:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
               </button>
             )}
 
             <button
               onClick={() => handleOpenNewForDate(formatDateString(currentDate))}
-              className="ml-1 flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-black px-3.5 py-2 rounded-lg shadow-md transition-all cursor-pointer uppercase tracking-wider"
+              className="ml-0.5 flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-sm transition-all cursor-pointer uppercase tracking-wider"
             >
-              <Plus className="h-4 w-4 stroke-[3]" />
-              Treinamento
+              <Plus className="h-3.5 w-3.5 stroke-[3]" />
+              <span className="hidden sm:inline">Treinamento</span>
             </button>
           </div>
 
-          {/* Standalone Fullscreen Toggle Button (Separated on the right) */}
+          {/* Standalone Fullscreen Toggle Button */}
           <button
             onClick={toggleFullscreen}
-            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg transition-all cursor-pointer border ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider shadow-md transition-all cursor-pointer border ${
               isFullscreen 
                 ? 'bg-amber-600 hover:bg-amber-500 text-white border-amber-400/50 ring-2 ring-amber-400/30' 
                 : 'bg-[#0a1c38] hover:bg-blue-600 text-slate-100 border-slate-700/80 hover:border-blue-500'
@@ -346,13 +363,13 @@ export default function InteractiveCalendarView({
           >
             {isFullscreen ? (
               <>
-                <Minimize2 className="h-4 w-4 text-amber-200" />
-                <span>Sair Tela Cheia</span>
+                <Minimize2 className="h-3.5 w-3.5 text-amber-200" />
+                <span className="hidden sm:inline">Sair Tela Cheia</span>
               </>
             ) : (
               <>
-                <Maximize2 className="h-4 w-4 text-blue-400" />
-                <span>Tela Cheia</span>
+                <Maximize2 className="h-3.5 w-3.5 text-blue-400" />
+                <span className="hidden sm:inline">Tela Cheia</span>
               </>
             )}
           </button>
@@ -363,19 +380,17 @@ export default function InteractiveCalendarView({
       {/* ============================================================ */}
       {/* MAIN CONTENT AREA: LEFT PANEL + CALENDAR GRID               */}
       {/* ============================================================ */}
-      <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-5 min-h-0">
+      <div className="relative z-10 flex-1 flex flex-col md:flex-row gap-3 sm:gap-4 min-h-0 overflow-hidden">
         
-        {/* LEFT PANEL: INSTRUTORES + ESTATÍSTICAS + DESTAQUE (Hidden in Fullscreen Mode) */}
-        {!isFullscreen && (
-          <div className="w-full md:w-60 lg:w-64 flex flex-col gap-3.5 flex-shrink-0 overflow-y-auto pb-2">
+        {/* LEFT PANEL: INSTRUTORES + LOCAIS + ESTATÍSTICAS */}
+        {showSidebar && (
+          <div className="w-full md:w-56 lg:w-64 flex flex-col gap-2.5 flex-shrink-0 min-h-0 overflow-y-auto custom-scrollbar pb-1">
             
             {/* 1. INSTRUTORES Card */}
-            <div className="bg-white rounded-2xl flex flex-col shadow-xl border border-slate-200/90 overflow-hidden">
-              <div className="bg-[#001130] p-3 flex items-center justify-between">
+            <div className="bg-white rounded-2xl flex flex-col shadow-lg border border-slate-200/90 overflow-hidden flex-shrink-0 max-h-52">
+              <div className="bg-[#001130] px-3 py-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="text-blue-500">
-                    <Users className="h-4 w-4 stroke-[2.5]" />
-                  </div>
+                  <Users className="h-3.5 w-3.5 text-blue-400 stroke-[2.5]" />
                   <h3 className="text-xs font-black tracking-widest uppercase text-white">
                     Instrutores
                   </h3>
@@ -389,7 +404,7 @@ export default function InteractiveCalendarView({
                   </button>
                 )}
               </div>
-              <div className="flex flex-col p-2 gap-1 max-h-60 overflow-y-auto ">
+              <div className="flex flex-col p-1.5 gap-1 overflow-y-auto custom-scrollbar">
                 {instructors.map((inst) => {
                   const isSelected = selectedInstructorFilter === inst.id;
                   const avatarBg = inst.color || '#ea580c';
@@ -398,17 +413,17 @@ export default function InteractiveCalendarView({
                     <button
                       key={inst.id}
                       onClick={() => setSelectedInstructorFilter(isSelected ? null : inst.id)}
-                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer ${
+                      className={`w-full flex items-center gap-2 p-1.5 rounded-xl text-left transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-blue-50 ring-2 ring-blue-600 text-slate-900'
                           : 'bg-white hover:bg-slate-100 text-slate-800'
                       }`}
                     >
                       <div 
-                        className="h-7 w-7 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-xs flex-shrink-0"
+                        className="h-6 w-6 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-2xs flex-shrink-0"
                         style={{ backgroundColor: avatarBg }}
                       >
-                        <User className="h-3.5 w-3.5 stroke-[2.5]" />
+                        <User className="h-3 w-3 stroke-[2.5]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-black text-slate-900 truncate leading-tight">
@@ -422,12 +437,10 @@ export default function InteractiveCalendarView({
             </div>
 
             {/* 2. LOCAIS Card */}
-            <div className="bg-white rounded-2xl flex flex-col shadow-xl border border-slate-200/90 overflow-hidden">
-              <div className="bg-[#001130] p-3 flex items-center justify-between">
+            <div className="bg-white rounded-2xl flex flex-col shadow-lg border border-slate-200/90 overflow-hidden flex-shrink-0 max-h-44">
+              <div className="bg-[#001130] px-3 py-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="text-blue-500">
-                    <MapPin className="h-4 w-4 stroke-[2.5]" />
-                  </div>
+                  <MapPin className="h-3.5 w-3.5 text-blue-400 stroke-[2.5]" />
                   <h3 className="text-xs font-black tracking-widest uppercase text-white">
                     Locais
                   </h3>
@@ -441,7 +454,7 @@ export default function InteractiveCalendarView({
                   </button>
                 )}
               </div>
-              <div className="flex flex-col p-2 gap-1 max-h-60 overflow-y-auto ">
+              <div className="flex flex-col p-1.5 gap-1 overflow-y-auto custom-scrollbar">
                 {locations.map((loc) => {
                   const isSelected = selectedLocationFilter === loc.id;
                   
@@ -449,16 +462,14 @@ export default function InteractiveCalendarView({
                     <button
                       key={loc.id}
                       onClick={() => setSelectedLocationFilter(isSelected ? null : loc.id)}
-                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer ${
+                      className={`w-full flex items-center gap-2 p-1.5 rounded-xl text-left transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-blue-50 ring-2 ring-blue-600 text-slate-900'
                           : 'bg-white hover:bg-slate-100 text-slate-800'
                       }`}
                     >
-                      <div 
-                        className="h-7 w-7 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-xs flex-shrink-0 bg-slate-600"
-                      >
-                        <MapPin className="h-3.5 w-3.5 stroke-[2.5]" />
+                      <div className="h-6 w-6 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-2xs flex-shrink-0 bg-slate-600">
+                        <MapPin className="h-3 w-3 stroke-[2.5]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-black text-slate-900 truncate leading-tight" title={loc.name}>
@@ -471,58 +482,52 @@ export default function InteractiveCalendarView({
               </div>
             </div>
 
-            {/* 3. ESTATÍSTICAS DO MÊS Card (Redesigned matching system visual identity) */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 text-slate-900 shadow-md flex flex-col gap-2.5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-xs">
-                    <BarChart3 className="h-4 w-4 stroke-[2.5]" />
+            {/* 3. ESTATÍSTICAS DO MÊS Card */}
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-3 text-slate-900 shadow-md flex flex-col gap-2 flex-shrink-0">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="p-1 rounded-md bg-blue-600 text-white shadow-2xs">
+                    <BarChart3 className="h-3.5 w-3.5 stroke-[2.5]" />
                   </div>
                   <span className="text-xs font-black tracking-wider uppercase text-slate-900">
-                    Estatísticas do Mês
+                    Estatísticas
                   </span>
                 </div>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 uppercase">
+                <span className="text-[9.5px] font-black px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 uppercase">
                   {MONTHS_PT[month]}
                 </span>
               </div>
 
-              <div className="flex flex-col gap-1.5 pt-0.5">
+              <div className="flex flex-col gap-1">
                 {/* Agendados */}
-                <div className="flex items-center justify-between bg-slate-50/80 p-2 rounded-xl border border-slate-200/60 hover:bg-slate-100/80 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1 rounded bg-blue-100 text-blue-600">
-                      <CalendarIcon className="h-3.5 w-3.5 stroke-[2.5]" />
-                    </div>
-                    <span className="text-xs font-extrabold text-slate-700">Treinamentos agendados:</span>
+                <div className="flex items-center justify-between bg-slate-50 p-1.5 rounded-lg border border-slate-200/60">
+                  <div className="flex items-center gap-1.5">
+                    <CalendarIcon className="h-3 w-3 text-blue-600 stroke-[2.5]" />
+                    <span className="text-[11px] font-bold text-slate-700">Agendados:</span>
                   </div>
-                  <span className="text-xs font-black text-blue-700 px-2 py-0.5 rounded-md bg-blue-100/80 border border-blue-200">
+                  <span className="text-[11px] font-black text-blue-700 px-1.5 py-0.2 rounded bg-blue-100 border border-blue-200">
                     {totalMonthTrainings}
                   </span>
                 </div>
 
                 {/* Realizados */}
-                <div className="flex items-center justify-between bg-slate-50/80 p-2 rounded-xl border border-slate-200/60 hover:bg-slate-100/80 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1 rounded bg-emerald-100 text-emerald-600">
-                      <CheckCircle2 className="h-3.5 w-3.5 stroke-[2.5]" />
-                    </div>
-                    <span className="text-xs font-extrabold text-slate-700">Realizados:</span>
+                <div className="flex items-center justify-between bg-slate-50 p-1.5 rounded-lg border border-slate-200/60">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600 stroke-[2.5]" />
+                    <span className="text-[11px] font-bold text-slate-700">Realizados:</span>
                   </div>
-                  <span className="text-xs font-black text-emerald-700 px-2 py-0.5 rounded-md bg-emerald-100/80 border border-emerald-200">
+                  <span className="text-[11px] font-black text-emerald-700 px-1.5 py-0.2 rounded bg-emerald-100 border border-emerald-200">
                     {realizadosCount}
                   </span>
                 </div>
 
                 {/* Pendentes */}
-                <div className="flex items-center justify-between bg-slate-50/80 p-2 rounded-xl border border-slate-200/60 hover:bg-slate-100/80 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1 rounded bg-amber-100 text-amber-600">
-                      <Clock className="h-3.5 w-3.5 stroke-[2.5]" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-700">Pendentes:</span>
+                <div className="flex items-center justify-between bg-slate-50 p-1.5 rounded-lg border border-slate-200/60">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-3 w-3 text-amber-600 stroke-[2.5]" />
+                    <span className="text-[11px] font-bold text-slate-700">Pendentes:</span>
                   </div>
-                  <span className="text-xs font-black text-amber-700 px-2 py-0.5 rounded-md bg-amber-100/80 border border-amber-200">
+                  <span className="text-[11px] font-black text-amber-700 px-1.5 py-0.2 rounded bg-amber-100 border border-amber-200">
                     {pendentesCount}
                   </span>
                 </div>
@@ -530,14 +535,14 @@ export default function InteractiveCalendarView({
 
               {/* Progress Bar */}
               {totalMonthTrainings > 0 && (
-                <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-100">
-                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-600">
-                    <span>Progresso de Conclusão</span>
+                <div className="flex flex-col gap-0.5 pt-1 border-t border-slate-100">
+                  <div className="flex justify-between items-center text-[9.5px] font-bold text-slate-600">
+                    <span>Conclusão</span>
                     <span className="text-emerald-600 font-black">{completionPercent}%</span>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/80">
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/80">
                     <div 
-                      className="bg-emerald-500 h-2 rounded-full transition-all duration-500 shadow-xs" 
+                      className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500 shadow-2xs" 
                       style={{ width: `${completionPercent}%` }}
                     />
                   </div>
@@ -552,36 +557,36 @@ export default function InteractiveCalendarView({
         <div className="flex-1 flex flex-col min-h-0 bg-white border-2 border-slate-300 rounded-2xl overflow-hidden shadow-2xl">
           
           {/* Weekday Header (DOM, SEG, TER, QUA, QUI, SEX, SÁB) */}
-          <div className="grid grid-cols-7 bg-[#001130] border-b-2 border-slate-800">
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-red-500 tracking-wider border-r border-slate-800/80">
+          <div className="grid grid-cols-7 bg-[#001130] border-b-2 border-slate-800 flex-shrink-0">
+            <div className="py-2 text-center text-xs sm:text-sm font-black uppercase text-red-500 tracking-wider border-r border-slate-800/80">
               DOM
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
+            <div className="py-2 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               SEG
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
+            <div className="py-2 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               TER
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
+            <div className="py-2 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               QUA
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
+            <div className="py-2 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               QUI
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
+            <div className="py-2 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider border-r border-slate-800/80">
               SEX
             </div>
-            <div className="py-2.5 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider">
+            <div className="py-2 text-center text-xs sm:text-sm font-black uppercase text-white tracking-wider">
               SÁB
             </div>
           </div>
 
-          {/* Month Days Grid: Grouped by Week Rows */}
+          {/* Month/Week Days Grid: Grouped by Week Rows */}
           <div className="flex-1 min-h-0 bg-slate-300 flex flex-col overflow-y-auto custom-scrollbar gap-[1px]">
             {weeks.map((week, weekIndex) => (
               <div 
                 key={weekIndex} 
-                className="grid grid-cols-7 gap-[1px] bg-slate-300 min-h-[140px] flex-shrink-0"
+                className={`grid grid-cols-7 gap-[1px] bg-slate-300 flex-1 ${viewMode === 'week' ? 'min-h-[260px]' : 'min-h-[105px]'}`}
               >
                 {week.map((cell) => {
                   const dateStr = formatDateString(cell.date);
@@ -603,24 +608,24 @@ export default function InteractiveCalendarView({
                     <div
                       key={cell.key}
                       onClick={() => handleOpenNewForDate(dateStr)}
-                      className={`min-h-[140px] p-2 flex flex-col gap-1.5 transition-all cursor-pointer relative group ${
+                      className={`h-full min-h-[105px] p-1.5 sm:p-2 flex flex-col gap-1 transition-all cursor-pointer relative group ${
                         !cell.isCurrentMonth
                           ? 'bg-slate-100/80 text-slate-400 opacity-40 grayscale-[25%] hover:opacity-90 hover:grayscale-0'
                           : isPast
                           ? 'bg-[#f8fafc] text-slate-500 opacity-60 grayscale-[30%] hover:opacity-90 hover:grayscale-0'
                           : isToday
-                          ? 'bg-blue-50/50 ring-2 ring-inset ring-blue-500 hover:bg-blue-100/50 z-10 shadow-sm'
+                          ? 'bg-blue-50/50 ring-2 ring-inset ring-blue-500 hover:bg-blue-100/50 z-10 shadow-xs'
                           : holiday
                           ? 'bg-amber-50/60 hover:bg-amber-100/70'
                           : 'bg-[#f8fafc] text-slate-800 hover:bg-blue-50/70'
                       }`}
                     >
                       {/* Top Day Number Header */}
-                      <div className="flex items-center justify-between mb-0.5">
-                        <div className="flex items-center gap-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <span className={`text-xs sm:text-sm font-extrabold select-none flex items-center justify-center ${
                             isToday 
-                              ? 'h-6 w-6 rounded-full bg-blue-600 text-white shadow-sm'
+                              ? 'h-6 w-6 rounded-full bg-blue-600 text-white shadow-xs'
                               : holiday 
                               ? 'text-red-700 font-black' 
                               : cell.isCurrentMonth ? 'text-slate-800' : 'text-slate-400'
@@ -629,10 +634,10 @@ export default function InteractiveCalendarView({
                           </span>
                           {holiday && (
                             <span 
-                              className={`inline-flex items-center px-1 py-0.2 rounded text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-tight truncate max-w-[120px] ${
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-tight truncate max-w-[110px] ${
                                 holiday.type === 'municipal' 
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-300' 
-                                  : 'bg-red-100 text-red-800 border border-red-200'
+                                   ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                                   : 'bg-red-100 text-red-800 border border-red-200'
                               }`} 
                               title={holiday.name}
                             >
@@ -647,8 +652,8 @@ export default function InteractiveCalendarView({
                             e.stopPropagation();
                             handleOpenNewForDate(dateStr);
                           }}
-                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-opacity"
-                          title="Adicionar evento"
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition-opacity"
+                          title="Adicionar treinamento nesta data"
                         >
                           <Plus className="h-3 w-3" />
                         </button>
@@ -657,20 +662,20 @@ export default function InteractiveCalendarView({
                       {/* Holiday Indicator Banner */}
                       {holiday && (
                         <div 
-                          className={`rounded px-1.5 py-1 text-[9.5px] sm:text-[10px] font-bold flex items-center gap-1.5 border shadow-2xs ${
+                          className={`rounded-md px-1.5 py-0.5 text-[9px] sm:text-[9.5px] font-bold flex items-center gap-1 border shadow-2xs flex-shrink-0 ${
                             holiday.type === 'municipal'
                               ? 'bg-amber-100/95 text-amber-950 border-amber-300'
                               : 'bg-red-100/95 text-red-950 border-red-200'
                           }`}
                           title={holiday.name}
                         >
-                          <span className="text-[11px] leading-none flex-shrink-0">🎉</span>
+                          <span className="text-[10px] leading-none flex-shrink-0">🎉</span>
                           <span className="truncate font-black">{holiday.name}</span>
                         </div>
                       )}
 
                       {/* List of Detailed Training Cards */}
-                      <div className="flex flex-col gap-1.5 pr-0.5 mt-0.5">
+                      <div className="flex-1 min-h-0 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5">
                         {dayTrainings.map((t) => {
                           const inst = instructorsMap.get(t.instructorId);
                           const loc = locationsMap.get(t.locationId);
@@ -689,8 +694,8 @@ export default function InteractiveCalendarView({
                             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
                           };
 
-                          const cardBg = isCanceled ? '#f8fafc' : getLightTint(instColor, 0.12);
-                          const cardBorderColor = isCanceled ? '#e2e8f0' : getLightTint(instColor, 0.35);
+                          const cardBg = isCanceled ? '#f8fafc' : getLightTint(instColor, 0.10);
+                          const cardBorderColor = isCanceled ? '#e2e8f0' : getLightTint(instColor, 0.30);
 
                           return (
                             <div
@@ -701,50 +706,59 @@ export default function InteractiveCalendarView({
                                 borderColor: cardBorderColor,
                                 borderLeftColor: isCanceled ? '#cbd5e1' : instColor 
                               }}
-                              className={`rounded-r-lg px-2.5 py-1.5 text-2xs ${
+                              className={`rounded-r-lg p-1.5 sm:p-2 text-2xs ${
                                 isCanceled 
-                                  ? 'border-l-[5px] border-dashed border-slate-300' 
-                                  : 'border-l-[5px]'
+                                  ? 'border-l-[4px] border-dashed border-slate-300' 
+                                  : 'border-l-[4px]'
                               } border-y border-r shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-1 group/card hover:translate-x-0.5 select-none`}
-                              title={`${t.title} - ${inst?.name || ''} (${loc?.name || ''}) - Clique para editar`}
+                              title={`${t.title} - ${inst?.name || 'Sem Instrutor'} (${loc?.name || 'Sem Local'}) - Clique para editar`}
                             >
-                              {/* Row 1: Time Pill Badge + Title */}
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span 
-                                  style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
-                                  className="px-1.5 py-0.5 rounded text-[10px] sm:text-[10.5px] font-black text-white tracking-tight flex-shrink-0 shadow-2xs"
-                                >
-                                  {timeStr}
-                                </span>
-                                <span className={`truncate font-black text-[11px] sm:text-[12px] leading-tight flex-1 ${
-                                  isCanceled ? 'line-through text-slate-400' : 'text-slate-900'
-                                }`}>
-                                  {t.title}
-                                </span>
-                                {t.attendeeCount && t.attendeeCount > 0 && (
-                                  <span className="flex-shrink-0 bg-slate-200 text-slate-700 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-300 shadow-2xs" title={`${t.attendeeCount} alunos cadastrados`}>
-                                    {t.attendeeCount}
+                              {/* Row 1: Time Pill + Title + Badges (Mini Toggle + Attendee count) */}
+                              <div className="flex items-start justify-between gap-1 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                  <span 
+                                    style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
+                                    className="px-1.5 py-0.5 rounded text-[9.5px] sm:text-[10px] font-black text-white tracking-tight flex-shrink-0 shadow-2xs leading-none"
+                                  >
+                                    {timeStr}
                                   </span>
-                                )}
+                                  <span className={`font-black text-[10.5px] sm:text-[11.5px] leading-tight break-words line-clamp-2 ${
+                                    isCanceled ? 'line-through text-slate-400' : 'text-slate-900'
+                                  }`}>
+                                    {t.title}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
+                                  {t.protheusLaunched && (
+                                    <ProtheusToggle checked={true} size="replica" className="flex-shrink-0" />
+                                  )}
+                                  {t.attendeeCount && t.attendeeCount > 0 && (
+                                    <span 
+                                      className="bg-slate-200/90 text-slate-800 text-[9px] font-black px-1.5 py-0.5 rounded-full border border-slate-300 shadow-2xs leading-none flex-shrink-0" 
+                                      title={`${t.attendeeCount} alunos cadastrados`}
+                                    >
+                                      {t.attendeeCount}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
-                              {/* Row 2: Location & Instructor in a Single Line */}
-                              <div className="flex items-center gap-1.5 text-[9.5px] sm:text-[10px] font-bold text-slate-800 truncate min-w-0 leading-tight pt-0.5">
+                              {/* Row 2: Location & Instructor with Clear Structure */}
+                              <div className="flex items-center justify-between gap-1 text-[9px] sm:text-[10px] leading-tight pt-1 border-t border-black/5">
                                 {/* Location */}
-                                <span className="flex items-center gap-0.5 truncate flex-shrink min-w-0 text-slate-600">
+                                <span className="flex items-center gap-0.5 truncate text-slate-600 font-bold min-w-0 flex-1" title={loc?.name || 'Local não definido'}>
                                   <MapPin className="h-2.5 w-2.5 flex-shrink-0 text-slate-500" />
-                                  <span className="truncate">{loc?.name || 'Local N/A'}</span>
+                                  <span className="truncate">{loc?.name || 'Local não definido'}</span>
                                 </span>
 
-                                <span className="text-slate-400 font-semibold flex-shrink-0">•</span>
-
                                 {/* Instructor */}
-                                <span className="flex items-center gap-1 truncate flex-shrink min-w-0 font-extrabold text-slate-900">
+                                <span className="flex items-center gap-1 truncate font-extrabold text-slate-900 flex-shrink-0 max-w-[55%]" title={inst?.name || 'Instrutor não definido'}>
                                   <div 
                                     className="h-2 w-2 rounded-full flex-shrink-0 shadow-2xs" 
                                     style={{ backgroundColor: isCanceled ? '#94a3b8' : instColor }}
                                   />
-                                  <span className="truncate">{inst?.name || 'Instrutor N/A'}</span>
+                                  <span className="truncate">{inst?.name || 'Instrutor não definido'}</span>
                                 </span>
                               </div>
                             </div>
@@ -761,7 +775,6 @@ export default function InteractiveCalendarView({
         </div>
 
       </div>
-
 
     </div>
   );

@@ -30,6 +30,7 @@ import {
   Users
 } from 'lucide-react';
 import { formatTimeString } from '../utils/dateUtils';
+import ProtheusToggle from './ProtheusToggle';
 
 interface TrainingsManagementProps {
   trainings: Training[];
@@ -41,6 +42,8 @@ interface TrainingsManagementProps {
   onDeleteTraining: (id: string) => void;
   onBulkDeleteTrainings?: (ids: string[]) => void;
   onBulkUpdateStatusTrainings?: (ids: string[], status: TrainingStatus) => void;
+  onToggleProtheus?: (id: string, launched: boolean) => void;
+  onBulkUpdateProtheus?: (ids: string[], launched: boolean) => void;
 }
 
 export default function TrainingsManagement({
@@ -53,11 +56,14 @@ export default function TrainingsManagement({
   onDeleteTraining,
   onBulkDeleteTrainings,
   onBulkUpdateStatusTrainings,
+  onToggleProtheus,
+  onBulkUpdateProtheus,
 }: TrainingsManagementProps) {
   const [search, setSearch] = useState('');
   const [instFilter, setInstFilter] = useState('');
   const [locFilter, setLocFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [protheusFilter, setProtheusFilter] = useState<'all' | 'launched' | 'pending'>('all');
   const [sortBy, setSortBy] = useState<'date-asc' | 'date-desc'>('date-asc');
 
   // Bulk selection state
@@ -77,8 +83,12 @@ export default function TrainingsManagement({
       const matchesInstructor = !instFilter || t.instructorId === instFilter;
       const matchesLocation = !locFilter || t.locationId === locFilter;
       const matchesStatus = !statusFilter || t.status === statusFilter;
+      const matchesProtheus = 
+        protheusFilter === 'all' ||
+        (protheusFilter === 'launched' && Boolean(t.protheusLaunched)) ||
+        (protheusFilter === 'pending' && !t.protheusLaunched);
       
-      return matchesSearch && matchesInstructor && matchesLocation && matchesStatus;
+      return matchesSearch && matchesInstructor && matchesLocation && matchesStatus && matchesProtheus;
     });
 
     list.sort((a, b) => {
@@ -87,7 +97,7 @@ export default function TrainingsManagement({
     });
 
     return list;
-  }, [trainings, deferredSearch, instFilter, locFilter, statusFilter, sortBy]);
+  }, [trainings, deferredSearch, instFilter, locFilter, statusFilter, protheusFilter, sortBy]);
 
   // Calculate quick stats
   const stats = useMemo(() => {
@@ -148,7 +158,7 @@ export default function TrainingsManagement({
 
     if (targetList.length === 0) return;
 
-    const headers = ['Titulo', 'Instrutor', 'Especialidade', 'Local', 'Tipo Local', 'Data Inicio', 'Hora Inicio', 'Hora Termino', 'Participantes', 'Status', 'Descricao'];
+    const headers = ['Titulo', 'Instrutor', 'Especialidade', 'Local', 'Tipo Local', 'Data Inicio', 'Hora Inicio', 'Hora Termino', 'Participantes', 'Status', 'Lancado no Protheus', 'Descricao'];
     
     const rows = targetList.map((t) => {
       const inst = instructorsMap.get(t.instructorId);
@@ -166,7 +176,9 @@ export default function TrainingsManagement({
         datePart,
         startT,
         endT,
+        t.attendeeCount ?? '',
         t.status,
+        t.protheusLaunched ? 'Sim' : 'Não',
         (t.description || '').replace(/"/g, '""')
       ];
     });
@@ -394,6 +406,18 @@ export default function TrainingsManagement({
             <option value="cancelado">Cancelado</option>
           </select>
 
+          {/* Protheus Filter */}
+          <select
+            id="mgmt-filter-protheus"
+            value={protheusFilter}
+            onChange={(e) => setProtheusFilter(e.target.value as any)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 focus:border-blue-500 focus:outline-none bg-white font-medium"
+          >
+            <option value="all">Protheus: Todos</option>
+            <option value="launched">Protheus: Apenas Lançados (Verde)</option>
+            <option value="pending">Protheus: Pendentes (Vermelho)</option>
+          </select>
+
           {/* Sorting direction */}
           <select
             id="mgmt-sort"
@@ -426,27 +450,51 @@ export default function TrainingsManagement({
             {/* Status change actions */}
             <div className="flex items-center bg-blue-950/80 p-1 rounded-lg border border-blue-800">
               <span className="text-3xs font-extrabold uppercase text-slate-400 px-2 hidden md:inline">
-                Alterar Status:
+                Status:
               </span>
               <button
                 onClick={() => handleBulkStatusChange('confirmado')}
-                className="px-2.5 py-1 text-2xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-md transition-colors cursor-pointer"
+                className="px-2 py-1 text-2xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-md transition-colors cursor-pointer"
               >
                 Confirmado
               </button>
               <button
                 onClick={() => handleBulkStatusChange('aguardando')}
-                className="ml-1 px-2.5 py-1 text-2xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-md transition-colors cursor-pointer"
+                className="ml-1 px-2 py-1 text-2xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-md transition-colors cursor-pointer"
               >
                 Aguardando
               </button>
               <button
                 onClick={() => handleBulkStatusChange('cancelado')}
-                className="ml-1 px-2.5 py-1 text-2xs font-bold bg-slate-700 hover:bg-slate-600 text-white rounded-md transition-colors cursor-pointer"
+                className="ml-1 px-2 py-1 text-2xs font-bold bg-slate-700 hover:bg-slate-600 text-white rounded-md transition-colors cursor-pointer"
               >
                 Cancelado
               </button>
             </div>
+
+            {/* Protheus bulk actions */}
+            {onBulkUpdateProtheus && (
+              <div className="flex items-center bg-blue-950/80 p-1 rounded-lg border border-blue-800">
+                <span className="text-3xs font-extrabold uppercase text-slate-400 px-2 hidden md:inline">
+                  Protheus:
+                </span>
+                <button
+                  onClick={() => onBulkUpdateProtheus(Array.from(selectedIds), true)}
+                  className="flex items-center gap-1 px-2.5 py-1 text-2xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-md transition-colors cursor-pointer"
+                  title="Marcar selecionados como Lançado no Protheus"
+                >
+                  <Check className="h-3 w-3 stroke-[3]" />
+                  Lançar (Sim)
+                </button>
+                <button
+                  onClick={() => onBulkUpdateProtheus(Array.from(selectedIds), false)}
+                  className="ml-1 px-2.5 py-1 text-2xs font-bold bg-red-600 hover:bg-red-500 text-white rounded-md transition-colors cursor-pointer"
+                  title="Marcar selecionados como Pendente de Lançamento"
+                >
+                  Pendente (Não)
+                </button>
+              </div>
+            )}
 
             {/* Export selected */}
             <button
@@ -454,7 +502,7 @@ export default function TrainingsManagement({
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-blue-800 hover:bg-blue-700 text-white rounded-lg transition-colors cursor-pointer border border-blue-700"
             >
               <Download className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Exportar Selecionados</span>
+              <span className="hidden sm:inline">Exportar</span>
             </button>
 
             {/* Bulk Delete */}
@@ -465,7 +513,7 @@ export default function TrainingsManagement({
                 className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shadow-sm transition-colors cursor-pointer"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Excluir Selecionados
+                Excluir
               </button>
             )}
 
@@ -519,6 +567,7 @@ export default function TrainingsManagement({
                   <th className="px-5 py-3.5">Local / Ambiente</th>
                   <th className="px-5 py-3.5">Participantes</th>
                   <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5 text-center">PROTHEUS</th>
                   <th className="px-5 py-3.5 text-right">Ações</th>
                 </tr>
               </thead>
@@ -635,9 +684,21 @@ export default function TrainingsManagement({
                           <span className="text-slate-400 text-xs">-</span>
                         )}
                       </td>
+
                       {/* Status */}
                       <td className="px-5 py-4 whitespace-nowrap">
                         {renderStatusBadge(t.status)}
+                      </td>
+
+                      {/* Protheus Toggle Switch */}
+                      <td className="px-5 py-4 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center">
+                          <ProtheusToggle
+                            checked={Boolean(t.protheusLaunched)}
+                            onChange={(newVal) => onToggleProtheus?.(t.id, newVal)}
+                            size="sm"
+                          />
+                        </div>
                       </td>
 
                       {/* Actions */}

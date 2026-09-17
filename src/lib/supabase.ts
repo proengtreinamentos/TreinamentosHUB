@@ -6,9 +6,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { Instructor, Location, Training } from '../types';
 
-// Read environment variables (Vite-style)
-const rawSupabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+// Read environment variables (Vite-style with Node fallback)
+const rawSupabaseUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_URL) || (typeof process !== 'undefined' ? process.env?.VITE_SUPABASE_URL : undefined);
+const supabaseAnonKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || (typeof process !== 'undefined' ? process.env?.VITE_SUPABASE_ANON_KEY : undefined);
 
 // Clean up Supabase URL if it contains /rest/v1 suffix to avoid double pathing issues
 const getCleanSupabaseUrl = (url: string | undefined): string | undefined => {
@@ -75,7 +75,70 @@ function normalizeLocationRow(row: any): Location {
   };
 }
 
+export function serializeTrainingDescription(training: Training): string | null {
+  const meta: Record<string, any> = {};
+  if (training.protheusLaunched !== undefined) {
+    meta.protheus = Boolean(training.protheusLaunched);
+  }
+  if (training.attendeeCount !== undefined) {
+    meta.attendees = training.attendeeCount;
+  }
+  if (training.customColor) {
+    meta.color = training.customColor;
+  }
+
+  // Strip existing meta tag from description
+  const cleanDesc = (training.description || '')
+    .replace(/<!--meta:\{.*?\}-->\n?/g, '')
+    .trim();
+
+  const hasMeta = Object.keys(meta).length > 0;
+  if (!hasMeta && !cleanDesc) return null;
+  if (!hasMeta) return cleanDesc;
+
+  const metaTag = `<!--meta:${JSON.stringify(meta)}-->`;
+  return cleanDesc ? `${metaTag}\n${cleanDesc}` : metaTag;
+}
+
 function normalizeTrainingRow(row: any): Training {
+  let cleanDescription: string | undefined = undefined;
+  let parsedProtheus: boolean | undefined = undefined;
+  let parsedAttendees: number | undefined = undefined;
+  let parsedColor: string | undefined = undefined;
+
+  if (typeof row.description === 'string') {
+    const metaMatch = row.description.match(/<!--meta:(\{.*?\})-->/);
+    if (metaMatch) {
+      try {
+        const meta = JSON.parse(metaMatch[1]);
+        if (meta.protheus !== undefined) parsedProtheus = Boolean(meta.protheus);
+        if (meta.attendees !== undefined) parsedAttendees = Number(meta.attendees);
+        if (meta.color !== undefined) parsedColor = String(meta.color);
+      } catch {
+        // parse error ignored
+      }
+      const stripped = row.description.replace(/<!--meta:\{.*?\}-->\n?/g, '').trim();
+      cleanDescription = stripped || undefined;
+    } else {
+      cleanDescription = row.description.trim() || undefined;
+    }
+  }
+
+  const protheusFromColumn = row.protheusLaunched ?? row.protheus_launched ?? row.protheus;
+  const finalProtheus = protheusFromColumn !== undefined 
+    ? Boolean(protheusFromColumn) 
+    : (parsedProtheus !== undefined ? parsedProtheus : false);
+
+  const attendeesFromColumn = row.attendeeCount ?? row.attendee_count;
+  const finalAttendees = attendeesFromColumn !== undefined && attendeesFromColumn !== null
+    ? Number(attendeesFromColumn)
+    : parsedAttendees;
+
+  const colorFromColumn = row.customColor ?? row.custom_color;
+  const finalColor = colorFromColumn !== undefined && colorFromColumn !== null
+    ? String(colorFromColumn)
+    : parsedColor;
+
   return {
     id: String(row.id),
     title: row.title || '',
@@ -84,9 +147,10 @@ function normalizeTrainingRow(row: any): Training {
     startDate: row.startDate || row.start_date || '',
     endDate: row.endDate || row.end_date || '',
     status: row.status || 'confirmado',
-    description: row.description || undefined,
-    customColor: row.customColor ?? row.custom_color ?? undefined,
-    attendeeCount: row.attendeeCount ?? row.attendee_count ?? undefined,
+    description: cleanDescription,
+    customColor: finalColor,
+    attendeeCount: finalAttendees,
+    protheusLaunched: finalProtheus,
   };
 }
 
@@ -97,7 +161,7 @@ function normalizeTrainingRow(row: any): Training {
  */
 
 // 1. INSTRUTORES
-export async function dbGetInstructors(fallbackData: Instructor[]): Promise<Instructor[]> {
+export async function dbGetInstructors(fallbackData: Instructor[] = []): Promise<Instructor[]> {
   const getLocalInstructors = (): Instructor[] => {
     const stored = localStorage.getItem('tr_instructors');
     if (stored !== null) {
@@ -217,7 +281,7 @@ export async function dbDeleteInstructor(id: string): Promise<boolean> {
 }
 
 // 2. LOCAIS
-export async function dbGetLocations(fallbackData: Location[]): Promise<Location[]> {
+export async function dbGetLocations(fallbackData: Location[] = []): Promise<Location[]> {
   const getLocalLocations = (): Location[] => {
     const stored = localStorage.getItem('tr_locations');
     if (stored !== null) {
@@ -332,7 +396,7 @@ export async function dbDeleteLocation(id: string): Promise<boolean> {
 }
 
 // 3. TREINAMENTOS
-export async function dbGetTrainings(fallbackData: Training[]): Promise<Training[]> {
+export async function dbGetTrainings(fallbackData: Training[] = []): Promise<Training[]> {
   const getLocalTrainings = (): Training[] => {
     const stored = localStorage.getItem('tr_trainings');
     if (stored !== null) {
@@ -364,7 +428,7 @@ export async function dbGetTrainings(fallbackData: Training[]): Promise<Training
     const rawRemoteList = (data || []).map(normalizeTrainingRow);
     const localMap = new Map(localList.map(t => [t.id, t]));
     
-    // Soft merge: Preserve attendeeCount and customColor from local if remote dropped them (due to old schema)
+    // Soft merge: Preserve attendeeCount, customColor, and protheusLaunched from local if remote dropped them (due to old schema)
     const remoteList = rawRemoteList.map(remote => {
       const local = localMap.get(remote.id);
       if (local) {
@@ -373,6 +437,11 @@ export async function dbGetTrainings(fallbackData: Training[]): Promise<Training
         }
         if (remote.customColor === undefined && local.customColor !== undefined) {
           remote.customColor = local.customColor;
+        }
+        if (!remote.protheusLaunched && local.protheusLaunched) {
+          remote.protheusLaunched = true;
+          // Auto-sync back to Supabase so the remote description tag is populated permanently
+          dbSaveTraining({ ...remote, protheusLaunched: true }).catch(() => {});
         }
       }
       return remote;
@@ -406,7 +475,9 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
   if (!supabase) return false;
 
   try {
-    // 1. First try: Exact camelCase matching the user's DB schema
+    const descToSave = serializeTrainingDescription(training);
+
+    // 1. First try: Exact camelCase matching the user's DB schema + description metadata
     let { error } = await supabase.from('trainings').upsert({
       id: training.id,
       title: training.title,
@@ -415,11 +486,12 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
       startDate: training.startDate,
       endDate: training.endDate,
       status: training.status,
-      description: training.description || null,
+      description: descToSave,
       attendeeCount: training.attendeeCount ?? null,
+      protheusLaunched: training.protheusLaunched ?? false,
     });
 
-    if (error && (error.message.includes('attendeeCount') || error.message.includes('customColor') || error.message.includes('column'))) {
+    if (error && (error.message.includes('attendeeCount') || error.message.includes('customColor') || error.message.includes('protheus') || error.message.includes('column'))) {
       // 2. Second try: snake_case for DBs that use it
       const retrySnake = await supabase.from('trainings').upsert({
         id: training.id,
@@ -429,13 +501,14 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
         start_date: training.startDate,
         end_date: training.endDate,
         status: training.status,
-        description: training.description || null,
+        description: descToSave,
         attendee_count: training.attendeeCount ?? null,
+        protheus_launched: training.protheusLaunched ?? false,
       });
       error = retrySnake.error;
       
       // 3. Third try: remove new columns if they don't exist at all (fallback to old schema)
-      if (error && (error.message.includes('attendee') || error.message.includes('column'))) {
+      if (error && (error.message.includes('attendee') || error.message.includes('protheus') || error.message.includes('column'))) {
         const retryOld = await supabase.from('trainings').upsert({
           id: training.id,
           title: training.title,
@@ -444,7 +517,7 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
           startDate: training.startDate,
           endDate: training.endDate,
           status: training.status,
-          description: training.description || null,
+          description: descToSave,
         });
         error = retryOld.error;
         
@@ -457,7 +530,7 @@ export async function dbSaveTraining(training: Training): Promise<boolean> {
               start_date: training.startDate,
               end_date: training.endDate,
               status: training.status,
-              description: training.description || null,
+              description: descToSave,
             });
             error = retryOldSnake.error;
         }

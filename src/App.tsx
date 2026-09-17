@@ -456,6 +456,41 @@ export default function App() {
     }
   };
 
+  const handleToggleProtheus = async (id: string, launched: boolean) => {
+    const target = trainings.find((t) => t.id === id);
+    if (!target) return;
+    const updatedTraining: Training = { ...target, protheusLaunched: launched };
+    const updated = trainings.map((t) => (t.id === id ? updatedTraining : t));
+    setTrainings(updated);
+    localStorage.setItem('tr_trainings', JSON.stringify(updated));
+
+    await dbSaveTraining(updatedTraining);
+    if (launched) {
+      triggerToast(`Treinamento "${target.title}" marcado como lançado no Protheus!`, 'success');
+    } else {
+      triggerToast(`Treinamento "${target.title}" desmarcado do Protheus.`, 'info');
+    }
+  };
+
+  const handleBulkUpdateProtheus = async (ids: string[], launched: boolean) => {
+    if (ids.length === 0) return;
+    const idsSet = new Set(ids);
+    const updated = trainings.map((t) => (idsSet.has(t.id) ? { ...t, protheusLaunched: launched } : t));
+    setTrainings(updated);
+    localStorage.setItem('tr_trainings', JSON.stringify(updated));
+
+    for (const tId of ids) {
+      const target = updated.find((t) => t.id === tId);
+      if (target) await dbSaveTraining(target);
+    }
+    triggerToast(
+      launched 
+        ? `${ids.length} treinamentos marcados como lançados no Protheus!` 
+        : `${ids.length} treinamentos desmarcados do Protheus.`,
+      'success'
+    );
+  };
+
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
     const { type, id } = confirmDelete;
@@ -727,6 +762,8 @@ export default function App() {
             onDeleteTraining={handleDeleteTrainingTrigger}
             onBulkDeleteTrainings={handleBulkDeleteTrainings}
             onBulkUpdateStatusTrainings={handleBulkUpdateStatusTrainings}
+            onToggleProtheus={handleToggleProtheus}
+            onBulkUpdateProtheus={handleBulkUpdateProtheus}
           />
         )}
         {activeTab === 'dashboard' && (
