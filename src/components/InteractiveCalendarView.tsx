@@ -586,7 +586,7 @@ export default function InteractiveCalendarView({
             {weeks.map((week, weekIndex) => (
               <div 
                 key={weekIndex} 
-                className={`grid grid-cols-7 gap-[1px] bg-slate-300 flex-1 ${viewMode === 'week' ? 'min-h-[260px]' : 'min-h-[105px]'}`}
+                className={`grid grid-cols-7 gap-[1px] bg-slate-300 w-full flex-1 min-h-fit ${viewMode === 'week' ? 'min-h-[280px]' : 'min-h-[110px]'}`}
               >
                 {week.map((cell) => {
                   const dateStr = formatDateString(cell.date);
@@ -608,7 +608,7 @@ export default function InteractiveCalendarView({
                     <div
                       key={cell.key}
                       onClick={() => handleOpenNewForDate(dateStr)}
-                      className={`h-full min-h-[105px] p-1.5 sm:p-2 flex flex-col gap-1 transition-all cursor-pointer relative group ${
+                      className={`h-full min-h-[110px] p-1.5 sm:p-2 flex flex-col gap-1.5 transition-all cursor-pointer relative group ${
                         !cell.isCurrentMonth
                           ? 'bg-slate-100/80 text-slate-400 opacity-40 grayscale-[25%] hover:opacity-90 hover:grayscale-0'
                           : isPast
@@ -675,7 +675,7 @@ export default function InteractiveCalendarView({
                       )}
 
                       {/* List of Detailed Training Cards */}
-                      <div className="flex-1 min-h-0 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5">
+                      <div className="flex flex-col gap-1.5 mt-0.5">
                         {dayTrainings.map((t) => {
                           const inst = instructorsMap.get(t.instructorId);
                           const loc = locationsMap.get(t.locationId);
@@ -710,7 +710,7 @@ export default function InteractiveCalendarView({
                                 isCanceled 
                                   ? 'border-l-[4px] border-dashed border-slate-300' 
                                   : 'border-l-[4px]'
-                              } border-y border-r shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-1 group/card hover:translate-x-0.5 select-none`}
+                              } border-y border-r shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col gap-1.5 group/card hover:translate-x-0.5 select-none`}
                               title={`${t.title} - ${inst?.name || 'Sem Instrutor'} (${loc?.name || 'Sem Local'}) - Clique para editar`}
                             >
                               {/* Row 1: Time Pill + Title + Badges (Mini Toggle + Attendee count) */}
